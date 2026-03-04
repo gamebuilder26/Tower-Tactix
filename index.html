@@ -1410,8 +1410,6 @@ function draw(){
     var t2=towers[twi],tsel=t2===selObj;
     if(tsel){cx.strokeStyle='rgba(255,220,0,.6)';cx.lineWidth=5;cx.globalAlpha=.5;cx.beginPath();cx.arc(t2.x,t2.y,21,0,Math.PI*2);cx.stroke();cx.globalAlpha=1;}
     drawTower(cx,t2,tsel);
-    for(var ua2=0;ua2<t2.upA;ua2++){var aa2=-Math.PI/2+(ua2-1)*.4;cx.fillStyle='#22c55e';cx.beginPath();cx.arc(t2.x+Math.cos(aa2)*15,t2.y+Math.sin(aa2)*15,2.5,0,Math.PI*2);cx.fill();}
-    for(var ub2=0;ub2<t2.upB;ub2++){var ab2=Math.PI/2+(ub2-1)*.4;cx.fillStyle='#f97316';cx.beginPath();cx.arc(t2.x+Math.cos(ab2)*15,t2.y+Math.sin(ab2)*15,2.5,0,Math.PI*2);cx.fill();}
   }
 
   if(heroUnit){
