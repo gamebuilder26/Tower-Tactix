@@ -203,7 +203,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
   </div>
   <div style="font-size:12px;font-weight:900;color:#00e5ff;font-family:Orbitron,sans-serif;letter-spacing:2px;text-shadow:0 0 10px #00e5ff88;">TOWER TATIX</div>
   <div style="display:flex;align-items:center;gap:6px;">
-    <div style="font-size:11px;font-weight:700;color:#ff3366;font-family:Orbitron,sans-serif;">&#10084; <span id="ldisp">80</span></div>
+    <div style="font-size:11px;font-weight:700;color:#ff3366;font-family:Orbitron,sans-serif;">&#10084; <span id="ldisp">100</span></div>
     <div style="font-size:10px;color:#006688;font-family:Rajdhani,sans-serif;font-weight:600;">W<span id="wdisp">0</span>/<span id="wmaxdisp">10</span></div>
   </div>
 </div>
@@ -449,10 +449,12 @@ var HEROES={
     pathB:{name:'Guardian',levels:['+$30/wave','Lives shield','Fort Aura'],costs:[200,270,430]}}
 };
 
+// Fixed start values — do not change (rule: $200 cash, 100 lives every game)
+var STARTING_CASH=200,STARTING_LIVES=100;
 var TWAVES=10,gameMode='normal',paused=false,autoPlay=false;
 var selectedHeroKey=null,pendingHeroKey=null;
 var heroUnit=null,heroCooldownLeft=0,heroAbilityReady=false,fortifyActive=false;
-var $m=200,$l=80,$w=0,$s=1;
+var $m=STARTING_CASH,$l=STARTING_LIVES,$w=0,$s=1;
 var gameTotalDmg=0;
 var running=false,over=false,won=false,cleared=false;
 var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[];
@@ -2399,7 +2401,7 @@ function useAbility(){
     for(var i=0;i<bloons.length;i++){hitBloon(bloons[i],{dmg:zdmg,frz:false,burn:false,spl:0,clusterCount:0,chainCount:0,srcT:heroUnit});splParts(bloons[i].x,bloons[i].y,'#c084fc',3);}
     setMsg('Thunderstrike! Lightning hits all!');
   } else if(selectedHeroKey==='titan'){
-    $l=Math.min(80,$l+20);document.getElementById('ldisp').textContent=$l;
+    $l=Math.min(STARTING_LIVES,$l+20);document.getElementById('ldisp').textContent=$l;
     fortifyActive=true;setMsg('Fortify! +20 lives, double bank income!');splParts(heroUnit.x,heroUnit.y,'#22c55e',20);
   }
 }
@@ -2524,7 +2526,7 @@ function goMenu(){
 }
 
 function resetGame(){
-  $m=200;$l=80;$w=0;$s=1;gameTotalDmg=0;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
+  $m=STARTING_CASH;$l=STARTING_LIVES;$w=0;$s=1;gameTotalDmg=0;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
   towers=[];farms=[];bloons=[];projs=[];parts=[];floaties=[];
   selType=null;selObj=null;prevSnap=null;spawnQ=[];spawnT=0;
   activeBoss=null;heroUnit=null;heroAbilityReady=false;heroCooldownLeft=0;fortifyActive=false;
