@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Tower Tatix</title>
+<title>Tower Tactix</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{background:#1a1a2e;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;height:100vh;overflow:hidden;user-select:none;box-sizing:border-box;}
@@ -91,7 +91,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     <button onclick="homeBtn()" style="background:#1e3a5f;border:1px solid #4facfe;border-radius:7px;color:#93c5fd;font-size:11px;font-weight:800;padding:3px 8px;cursor:pointer;line-height:1.4;">&#8962; Home</button>
     <div style="font-size:13px;font-weight:800;color:#f5c842;">&#128176;<span id="mdisp">200</span></div>
   </div>
-  <div style="font-size:13px;font-weight:900;color:#f5c842;">&#127381; Tower Tatix</div>
+  <div style="font-size:13px;font-weight:900;color:#f5c842;">&#127381; Tower Tactix</div>
   <div style="font-size:13px;font-weight:800;color:#ff6b6b;">&#10084;<span id="ldisp">100</span>&nbsp;<span style="color:#94a3b8;font-size:11px">W<span id="wdisp">0</span>/<span id="wmaxdisp">10</span></span></div>
 </div>
 <div id="bossbar">
@@ -170,6 +170,12 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
   <div id="info"></div>
 </div>
 <script>
+// ——— Constants ———
+var STARTING_CASH=200,STARTING_LIVES=100,MAX_SPEED=4;
+var PATH_RADIUS=26,FARM_PATH_RADIUS=30,SLOT_SNAP_DIST=40,PLACEMENT_EPS=8;
+var BLOON_SPEED_SCALE=55,INFINITE_RANGE=9999,SAVE_VERSION=2;
+
+// ——— Canvas & layout ———
 var cv=document.getElementById('gc'),cx=cv.getContext('2d');
 var PP=[],TOWER_SLOTS=[],FARM_ZONES=[];
 
@@ -184,7 +190,7 @@ function buildPath(){
 }
 
 function onPath(x,y,M){
-  M=M||26;
+  M=M||PATH_RADIUS;
   for(var i=1;i<PP.length;i++){
     var ax=PP[i-1].x,ay=PP[i-1].y,bx=PP[i].x,by=PP[i].y;
     var dx=bx-ax,dy=by-ay,len=dx*dx+dy*dy;
@@ -202,14 +208,14 @@ function buildSlots(){
   for(var gx=margin;gx<W-margin;gx+=size){
     for(var gy=margin;gy<H-margin;gy+=size){
       var cx2=gx+size/2,cy2=gy+size/2;
-      if(!onPath(cx2,cy2,26))TOWER_SLOTS.push({x:cx2,y:cy2,sz:size});
+      if(!onPath(cx2,cy2,PATH_RADIUS))TOWER_SLOTS.push({x:cx2,y:cy2,sz:size});
     }
   }
   var fsize=36,fmargin=18;
   for(var fx=fmargin;fx<W-fmargin;fx+=fsize){
     for(var fy=fmargin;fy<H-fmargin;fy+=fsize){
       var fcx=fx+fsize/2,fcy=fy+fsize/2;
-      if(!onPath(fcx,fcy,30))FARM_ZONES.push({x:fcx,y:fcy,sz:fsize});
+      if(!onPath(fcx,fcy,FARM_PATH_RADIUS))FARM_ZONES.push({x:fcx,y:fcy,sz:fsize});
     }
   }
 }
@@ -221,12 +227,12 @@ function doResize(){
 }
 
 function slotTaken(s){
-  if(heroUnit&&Math.hypot(heroUnit.x-s.x,heroUnit.y-s.y)<8)return true;
-  for(var i=0;i<towers.length;i++)if(Math.hypot(towers[i].x-s.x,towers[i].y-s.y)<8)return true;
+  if(heroUnit&&Math.hypot(heroUnit.x-s.x,heroUnit.y-s.y)<PLACEMENT_EPS)return true;
+  for(var i=0;i<towers.length;i++)if(Math.hypot(towers[i].x-s.x,towers[i].y-s.y)<PLACEMENT_EPS)return true;
   return false;
 }
 function zoneTaken(z){
-  for(var i=0;i<farms.length;i++)if(Math.hypot(farms[i].x-z.x,farms[i].y-z.y)<8)return true;
+  for(var i=0;i<farms.length;i++)if(Math.hypot(farms[i].x-z.x,farms[i].y-z.y)<PLACEMENT_EPS)return true;
   return false;
 }
 function nearSlot(x,y){
@@ -235,7 +241,7 @@ function nearSlot(x,y){
     var s=TOWER_SLOTS[i];if(slotTaken(s))continue;
     var d=Math.hypot(s.x-x,s.y-y);if(d<bd){bd=d;best=s;}
   }
-  return bd<40?best:null;
+  return bd<SLOT_SNAP_DIST?best:null;
 }
 function nearZone(x,y){
   var best=null,bd=9999;
@@ -243,9 +249,10 @@ function nearZone(x,y){
     var z=FARM_ZONES[i];if(zoneTaken(z))continue;
     var d=Math.hypot(z.x-x,z.y-y);if(d<bd){bd=d;best=z;}
   }
-  return bd<40?best:null;
+  return bd<SLOT_SNAP_DIST?best:null;
 }
 
+// ——— Tower definitions (cost, range, paths) ———
 var TD={
   dart:{cost:100,range:115,dmg:1,rate:1.4,col:'#4facfe',name:'Dart',desc:'Fast reliable shots',
     pathA:{name:'Rapid Fire',levels:['Rate +40%','Rate +60%','ULTRA x3 rate','Hyperspeed x2','Gatling: x5 rate'],costs:[70,90,150,2200,7500]},
@@ -324,15 +331,17 @@ var HEROES={
     pathB:{name:'Guardian',levels:['+$30/wave','Lives shield','Fort Aura'],costs:[200,270,430]}}
 };
 
+// ——— Game state ———
 var TWAVES=10,gameMode='normal',paused=false,autoPlay=false;
 var selectedHeroKey=null,pendingHeroKey=null;
 var heroUnit=null,heroCooldownLeft=0,heroAbilityReady=false,fortifyActive=false;
-var $m=200,$l=100,$w=0,$s=1;
+var $m=STARTING_CASH,$l=STARTING_LIVES,$w=0,$s=1;
 var running=false,over=false,won=false,cleared=false;
 var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[];
 var selType=null,selObj=null,prevSnap=null;
 var spawnQ=[],spawnT=0,bid=0,pid=0,lt=0;
 
+// ——— Wave & economy helpers ———
 function farmIncome(f){
   var i=FARM_DEF.baseIncome;
   if(f.up>=1)i+=15;if(f.up>=2)i+=30;if(f.up>=3)i+=55;if(f.up>=4)i+=100;if(f.up>=5)i+=200;
@@ -426,6 +435,7 @@ function hitBloon(b,p){
 }
 
 function getTowerStats(t){
+  if(!t||!t.type||!TD[t.type])return null;
   var d=TD[t.type],dmg=d.dmg,rate=d.rate,range=d.range;
   var splash=(t.type==='cannon'?28:0);
   var freezeAmt=1.8,permafrost=false,infiniteRange=false,burnMode=false,chainCount=0,clusterCount=0,nukeMode=false;
@@ -450,7 +460,7 @@ function getTowerStats(t){
     if(pa>=1)dmg*=2;if(pa>=2)dmg*=3;if(pa>=3)burnMode=true;if(pa>=4)dmg*=5;if(pa>=5){dmg*=8;burnMode=true;}
     if(pb>=1)chainCount=2;if(pb>=2)chainCount=4;if(pb>=3)chainCount=6;if(pb>=4){chainCount=10;dmg*=2;}if(pb>=5){chainCount=20;dmg*=2;}
   }
-  return{dmg:dmg,rate:rate,range:infiniteRange?9999:range,splash:splash,freezeAmt:freezeAmt,
+  return{dmg:dmg,rate:rate,range:infiniteRange?INFINITE_RANGE:range,splash:splash,freezeAmt:freezeAmt,
     permafrost:permafrost,burnMode:burnMode,chainCount:chainCount,clusterCount:clusterCount,nukeMode:nukeMode};
 }
 
@@ -465,7 +475,7 @@ function update(dt){
     if(b.burn>0){b.burn-=dt*sm;b.hp-=Math.max(0.8,b.mhp*0.04)*dt*sm;if(b.hp<=0){$m+=b.rew;document.getElementById('mdisp').textContent=$m;splParts(b.x,b.y,'#fb923c',8);updShop();b.dead=true;continue;}}
     var spd=b.spd;
     if(b.permafrost)spd*=.5;else if(b.frz>0){b.frz-=dt*sm;spd*=.12;}
-    b.dist+=spd*55*dt*sm;
+    b.dist+=spd*BLOON_SPEED_SCALE*dt*sm;
     if(b.dist>=pl){
       b.dead=true;
       var dmgTaken=b.leak||1;
@@ -482,12 +492,12 @@ function update(dt){
 
   for(var ti=0;ti<towers.length;ti++){
     var t=towers[ti];if(!t.lf)t.lf=0;
-    var st=getTowerStats(t),iv=(1/st.rate)/sm;
+    var st=getTowerStats(t);if(!st)continue;var iv=(1/st.rate)/sm;
     if(now-t.lf>=iv){
       var best=null,bd=-1;
       for(var bi=0;bi<bloons.length;bi++){
         var b2=bloons[bi];
-        if((Math.hypot(b2.x-t.x,b2.y-t.y)<=st.range||st.range>=9999)&&b2.dist>bd){bd=b2.dist;best=b2;}
+        if((Math.hypot(b2.x-t.x,b2.y-t.y)<=st.range||st.range>=INFINITE_RANGE)&&b2.dist>bd){bd=b2.dist;best=b2;}
       }
       if(best){
         t.shots=(t.shots||0)+1;
@@ -1399,9 +1409,10 @@ function draw(){
   }
 
   if(selObj&&selObj.type&&selObj!==heroUnit){
-    var st2=getTowerStats(selObj),rng2=Math.min(st2.range,400);
-    cx.strokeStyle='rgba(255,255,255,.2)';cx.lineWidth=1.5;cx.setLineDash([5,5]);
-    cx.beginPath();cx.arc(selObj.x,selObj.y,rng2,0,Math.PI*2);cx.stroke();cx.setLineDash([]);
+    var st2=getTowerStats(selObj);if(st2){var rng2=Math.min(st2.range,400);
+      cx.strokeStyle='rgba(255,255,255,.2)';cx.lineWidth=1.5;cx.setLineDash([5,5]);
+      cx.beginPath();cx.arc(selObj.x,selObj.y,rng2,0,Math.PI*2);cx.stroke();cx.setLineDash([]);
+    }
   }
 
   for(var fmi3=0;fmi3<farms.length;fmi3++){
@@ -1720,6 +1731,7 @@ function draw(){
   }
 }
 
+// ——— Input: canvas coords & tap ———
 function getXY(cX,cY){var r=cv.getBoundingClientRect();return{x:(cX-r.left)*(cv.width/r.width),y:(cY-r.top)*(cv.height/r.height)};}
 function updPrev(x,y){
   if(selType==='farm'){prevSnap=nearZone(x,y)||null;}
@@ -2029,7 +2041,7 @@ function updateBossBar(){
   document.getElementById('bosshptxt').textContent=activeBoss.bossName+' '+Math.max(0,Math.round(activeBoss.hp))+'/'+activeBoss.mhp;
 }
 
-function toggleSpd(){$s=$s===1?2:$s===2?3:$s===3?4:1;document.getElementById('spdbtn').textContent='⚡ '+$s+'x';}
+function toggleSpd(){$s=$s>=MAX_SPEED?1:$s+1;document.getElementById('spdbtn').textContent='⚡ '+$s+'x';}
 
 function togglePause(){
   paused=!paused;
@@ -2141,7 +2153,7 @@ function goMenu(){
 }
 
 function resetGame(){
-  $m=150;$l=100;$w=0;$s=1;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
+  $m=STARTING_CASH;$l=STARTING_LIVES;$w=0;$s=1;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
   towers=[];farms=[];bloons=[];projs=[];parts=[];floaties=[];
   selType=null;selObj=null;prevSnap=null;spawnQ=[];spawnT=0;
   activeBoss=null;heroUnit=null;heroAbilityReady=false;heroCooldownLeft=0;fortifyActive=false;
@@ -2175,16 +2187,18 @@ function toggleSavePanel(){
   if(!showing){renderSaveSlots();}
 }
 
+// ——— Save / load ———
 function getSaveKey(slot){return 'bbtd_save_'+slot;}
 
 function buildSaveState(){
   return JSON.stringify({
-    v:2,
+    v:SAVE_VERSION,
     ts:Date.now(),
     gameMode:gameMode,
     TWAVES:TWAVES,
     m:$m,l:$l,w:$w,s:$s,
     running:running,over:over,won:won,cleared:cleared,
+    spawnQ:spawnQ.slice(),spawnT:spawnT,
     towers:towers.map(function(t){return{x:t.x,y:t.y,type:t.type,upA:t.upA,upB:t.upB,lf:0,pops:t.pops,totalDmg:t.totalDmg,shots:t.shots,lastAngle:t.lastAngle||0};}),
     farms:farms.map(function(f){return{x:f.x,y:f.y,up:f.up,wavesGrown:f.wavesGrown,totalEarned:f.totalEarned,farmTimer:0};}),
     heroUnit:heroUnit?{x:heroUnit.x,y:heroUnit.y,heroKey:heroUnit.heroKey,upA:heroUnit.upA,upB:heroUnit.upB,lf:0,pops:heroUnit.pops,totalDmg:heroUnit.totalDmg,shots:heroUnit.shots}:null,
@@ -2209,7 +2223,7 @@ function loadGame(slot){
     var raw=localStorage.getItem(getSaveKey(slot));
     if(!raw){setMsg('No save in slot '+(slot+1));return;}
     var s=JSON.parse(raw);
-    if(!s||s.v!==2){setMsg('Save file is incompatible.');return;}
+    if(!s||s.v!==SAVE_VERSION){setMsg('Save file is incompatible.');return;}
 
     // Restore game state
     gameMode=s.gameMode;TWAVES=s.TWAVES;
@@ -2222,7 +2236,8 @@ function loadGame(slot){
     heroAbilityReady=s.heroAbilityReady;
     heroCooldownLeft=s.heroCooldownLeft;
     fortifyActive=s.fortifyActive;
-    bloons=[];projs=[];parts=[];floaties=[];spawnQ=[];spawnT=0;activeBoss=null;
+    bloons=[];projs=[];parts=[];floaties=[];activeBoss=null;
+    spawnQ=Array.isArray(s.spawnQ)?s.spawnQ:[];spawnT=typeof s.spawnT==='number'?s.spawnT:0;
     selType=null;selObj=null;prevSnap=null;
 
     // Hide overlays
@@ -2284,7 +2299,7 @@ function renderSaveSlots(){
     div.className='save-slot';
     var infoDiv=document.createElement('div');
     infoDiv.className='save-slot-info';
-    if(s&&s.v===2){
+    if(s&&s.v===SAVE_VERSION){
       var d=new Date(s.ts);
       var dateStr=d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
       var modeStr=modeLabels[s.gameMode]||s.gameMode;
@@ -2316,6 +2331,7 @@ function renderSaveSlots(){
 function loop(ts){if(!paused){var dt=Math.min((ts-lt)/1000,.05);lt=ts;update(dt);}else{lt=ts;}draw();requestAnimationFrame(loop);}
 window.addEventListener('resize',doResize);
 doResize();updShop();lt=performance.now();
+document.getElementById('mdisp').textContent=$m;document.getElementById('ldisp').textContent=$l;
 // Populate shop costs from data (single source of truth)
 (function(){
   var map={dart:'dart',cannon:'cannon',freeze:'freeze',sniper:'sniper',laser:'laser'};
