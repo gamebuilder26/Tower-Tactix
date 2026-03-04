@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Balloon Blitz TD</title>
+<title>Tower Tatix</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{background:#1a1a2e;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;height:100vh;overflow:hidden;user-select:none;box-sizing:border-box;}
@@ -91,7 +91,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     <button onclick="homeBtn()" style="background:#1e3a5f;border:1px solid #4facfe;border-radius:7px;color:#93c5fd;font-size:11px;font-weight:800;padding:3px 8px;cursor:pointer;line-height:1.4;">&#8962; Home</button>
     <div style="font-size:13px;font-weight:800;color:#f5c842;">&#128176;<span id="mdisp">200</span></div>
   </div>
-  <div style="font-size:13px;font-weight:900;color:#f5c842;">&#127880; Balloon Blitz TD</div>
+  <div style="font-size:13px;font-weight:900;color:#f5c842;">&#127381; Tower Tatix</div>
   <div style="font-size:13px;font-weight:800;color:#ff6b6b;">&#10084;<span id="ldisp">100</span>&nbsp;<span style="color:#94a3b8;font-size:11px">W<span id="wdisp">0</span>/<span id="wmaxdisp">10</span></span></div>
 </div>
 <div id="bossbar">
@@ -632,151 +632,484 @@ function drawTower(c,t,sel){
   var x=t.x,y=t.y,type=t.type;
   var now=performance.now()/1000;
   var pulse=0.5+0.5*Math.sin(now*2.5+(t.x+t.y)*0.05);
-  var spin=now*1.2+(t.x*0.1+t.y*0.1); // slow idle spin for barrels
-  var charge=Math.min(1,(now-(t.lf||0))*0.8); // charge up after last fire
+  var spin=now*1.2+(t.x*0.1+t.y*0.1);
+  var charge=Math.min(1,(now-(t.lf||0))*0.8);
+  var tier=Math.max(t.upA||0,t.upB||0); // 0-5
+  var pathA=t.upA>0; // which path is active
   c.save();
 
-  // Base platform shadow
-  c.globalAlpha=0.25;c.fillStyle='#000';
-  c.beginPath();c.ellipse(x+3,y+16,14,5,0,0,Math.PI*2);c.fill();c.globalAlpha=1;
+  // Shadow grows with tier
+  var baseR=13+tier*1.5;
+  c.globalAlpha=0.28+tier*0.04;c.fillStyle='#000';
+  c.beginPath();c.ellipse(x+3,y+17,baseR+1,5,0,0,Math.PI*2);c.fill();c.globalAlpha=1;
 
-  // Base platform
-  var baseGrad=c.createRadialGradient(x-4,y-4,2,x,y,16);
-  baseGrad.addColorStop(0,sel?'#4a7aaa':'#3a5070');
-  baseGrad.addColorStop(0.6,sel?'#2a5080':'#1e3555');
-  baseGrad.addColorStop(1,'#0f1e30');
+  // Base platform — colour shifts with tier
+  var tierCols=[['#3a5070','#1e3555'],['#2a5535','#163520'],['#553520','#301808'],
+                ['#4a2060','#280d3a'],['#5a0a0a','#300505'],['#1a0a3a','#0a0020']];
+  var tc=tierCols[Math.min(tier,5)];
+  var baseGrad=c.createRadialGradient(x-4,y-4,2,x,y,baseR);
+  baseGrad.addColorStop(0,sel?lighten(tc[0]):tc[0]);
+  baseGrad.addColorStop(1,tc[1]);
   c.fillStyle=baseGrad;
-  c.strokeStyle=sel?'#f5c842':'rgba(100,160,220,0.5)';c.lineWidth=sel?2.5:1.5;
-  c.beginPath();c.arc(x,y,15,0,Math.PI*2);c.fill();c.stroke();
+  // Tier 4+ glowing base ring
+  if(tier>=4){
+    var ringCol=tier===5?'#f5c842':pathA?'#22c55e':'#f97316';
+    c.shadowColor=ringCol;c.shadowBlur=12+pulse*8;
+  }
+  c.strokeStyle=sel?'#f5c842':(tier>=4?(pathA?'#22c55e':'#f97316'):'rgba(100,160,220,0.5)');
+  c.lineWidth=sel?2.5:(tier>=4?2.5:1.5);
+  c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.fill();c.stroke();
+  c.shadowBlur=0;
 
   // Charge ring
   if(charge<1){
     c.globalAlpha=(1-charge)*0.6;
     c.strokeStyle='#f5c842';c.lineWidth=2;
-    c.beginPath();c.arc(x,y,15+charge*4,0,Math.PI*2*charge);c.stroke();
+    c.beginPath();c.arc(x,y,baseR+charge*4,0,Math.PI*2*charge);c.stroke();
     c.globalAlpha=1;
   }
 
+  // ── DART ───────────────────────────────────────────────────────────────────
   if(type==='dart'){
-    // Rotating crossbow mount
-    c.save();c.translate(x,y);c.rotate(spin*0.3);
-    c.fillStyle='#1e3a6e';c.fillRect(-6,3,5,8);c.fillRect(1,3,5,8);
-    c.fillStyle='#2563eb';c.fillRect(-7,-5,14,10);
-    c.fillStyle='#1d4ed8';c.fillRect(-12,-4,6,6);c.fillRect(6,-4,6,6);
-    c.restore();
-    // Barrel (aims at last target)
+    c.save();c.translate(x,y);
     var bangle=t.lastAngle||0;
-    c.save();c.translate(x,y);c.rotate(bangle);
-    c.fillStyle='#94a3b8';c.fillRect(2,-1.5,14,3);
-    c.fillStyle='#cbd5e1';c.fillRect(14,-2,5,4);
-    // Muzzle glow
     var mf=Math.max(0,1-(now-(t.lf||0))*8);
-    if(mf>0){c.globalAlpha=mf;c.fillStyle='#fde68a';c.beginPath();c.arc(18,0,4,0,Math.PI*2);c.fill();c.globalAlpha=1;}
+
+    if(tier===0){
+      // T0: simple crossbow — single barrel
+      c.rotate(spin*0.3);
+      c.fillStyle='#1e3a6e';c.fillRect(-5,2,4,7);c.fillRect(1,2,4,7);
+      c.fillStyle='#2563eb';c.fillRect(-6,-4,12,8);
+      c.restore();c.save();c.translate(x,y);c.rotate(bangle);
+      c.fillStyle='#94a3b8';c.fillRect(2,-1.5,13,3);
+      c.fillStyle='#cbd5e1';c.fillRect(13,-2,4,4);
+    } else if(tier===1){
+      // T1: reinforced frame, thicker barrel
+      c.rotate(spin*0.25);
+      c.fillStyle='#1d4ed8';c.fillRect(-7,2,5,9);c.fillRect(2,2,5,9);
+      c.fillStyle='#3b82f6';c.fillRect(-8,-5,16,10);
+      c.fillStyle='#1e40af';c.fillRect(-12,-4,5,6);c.fillRect(7,-4,5,6);
+      c.restore();c.save();c.translate(x,y);c.rotate(bangle);
+      c.fillStyle='#94a3b8';c.fillRect(2,-2,15,4);
+      c.fillStyle='#e2e8f0';c.fillRect(15,-2.5,6,5);
+    } else if(tier===2){
+      // T2: dual side wings + wider mount
+      c.rotate(spin*0.2);
+      c.fillStyle='#1d4ed8';c.fillRect(-9,1,6,10);c.fillRect(3,1,6,10);
+      c.fillStyle='#3b82f6';c.fillRect(-9,-6,18,12);
+      c.fillStyle='#60a5fa';c.fillRect(-14,-3,5,7);c.fillRect(9,-3,5,7);
+      c.fillStyle='#93c5fd';c.beginPath();c.arc(0,-3,4,0,Math.PI*2);c.fill();
+      c.restore();c.save();c.translate(x,y);c.rotate(bangle);
+      c.fillStyle='#7dd3fc';c.fillRect(-1,-2.5,18,5);
+      c.fillStyle='#e0f2fe';c.fillRect(16,-3,7,6);
+    } else if(tier===3){
+      // T3: triple barrel tips, armored housing
+      c.rotate(spin*0.15);
+      c.fillStyle='#1e40af';c.fillRect(-10,0,20,11);
+      c.fillStyle='#3b82f6';c.beginPath();c.arc(0,-1,10,Math.PI,0);c.fill();
+      c.fillStyle='#60a5fa';c.fillRect(-13,-3,5,7);c.fillRect(8,-3,5,7);
+      c.fillStyle='#bfdbfe';c.beginPath();c.arc(0,-2,5,0,Math.PI*2);c.fill();
+      c.restore();c.save();c.translate(x,y);c.rotate(bangle);
+      // triple barrel
+      for(var bb=0;bb<3;bb++){var bo=(bb-1)*3;
+        c.fillStyle='#93c5fd';c.fillRect(2,bo-1,18,2);
+        c.fillStyle='#dbeafe';c.fillRect(18,bo-1.5,5,3);}
+    } else if(tier===4){
+      // T4: hyperspeed — glowing tri-cannon platform
+      c.rotate(spin*0.08);
+      var dg4=c.createRadialGradient(0,0,2,0,0,11);
+      dg4.addColorStop(0,'#1e40af');dg4.addColorStop(1,'#0c1a5e');
+      c.fillStyle=dg4;c.beginPath();c.arc(0,0,11,0,Math.PI*2);c.fill();
+      // orbit gems
+      for(var og=0;og<3;og++){var oa=spin*2+(og/3)*Math.PI*2;
+        c.fillStyle='#60a5fa';c.beginPath();c.arc(Math.cos(oa)*10,Math.sin(oa)*10,3,0,Math.PI*2);c.fill();}
+      c.restore();c.save();c.translate(x,y);c.rotate(bangle);
+      c.shadowColor='#60a5fa';c.shadowBlur=8;
+      for(var bb4=0;bb4<3;bb4++){var bo4=(bb4-1)*3.5;
+        c.fillStyle='#7dd3fc';c.fillRect(0,bo4-1.2,20,2.4);
+        c.fillStyle='#fff';c.fillRect(19,bo4-1.5,5,3);}
+      c.shadowBlur=0;
+    } else {
+      // T5: GATLING — massive spinning barrel cluster
+      c.rotate(spin*3); // fast spin
+      for(var gb=0;gb<6;gb++){var ga=(gb/6)*Math.PI*2;
+        c.fillStyle='#1d4ed8';c.fillRect(Math.cos(ga)*6-2,Math.sin(ga)*6-1.5,4,3);}
+      c.fillStyle='#3b82f6';c.beginPath();c.arc(0,0,6,0,Math.PI*2);c.fill();
+      c.restore();c.save();c.translate(x,y);c.rotate(bangle);
+      c.shadowColor='#93c5fd';c.shadowBlur=14;
+      c.fillStyle='#60a5fa';c.fillRect(0,-5,22,10);
+      c.fillStyle='#fff';c.fillRect(20,-3,8,6);
+      c.fillStyle='#bfdbfe';
+      for(var gsl=0;gsl<4;gsl++)c.fillRect(4+gsl*4,-5,2,10);
+      c.shadowBlur=0;
+    }
+    // Muzzle flash
+    if(mf>0){c.globalAlpha=mf;var mc=['#fde68a','#60a5fa','#7dd3fc','#93c5fd','#bfdbfe','#fff'][Math.min(tier,5)];
+      c.fillStyle=mc;c.shadowColor=mc;c.shadowBlur=6;
+      c.beginPath();c.arc(tier>=4?26:(tier>=2?20:17),0,3+tier,0,Math.PI*2);c.fill();
+      c.shadowBlur=0;c.globalAlpha=1;}
     c.restore();
-    // Sensor eye
-    var eyePulse=0.7+0.3*Math.sin(now*4+(t.x+t.y)*0.1);
+    // Eye / sensor — grows with tier
+    var eyeR=3+tier*0.8;var eyePulse=0.6+0.4*Math.sin(now*4+(x+y)*0.1);
     c.globalAlpha=eyePulse;
-    var eg=c.createRadialGradient(x,y-6,0,x,y-6,5);
-    eg.addColorStop(0,'#fff');eg.addColorStop(0.4,'#fbbf24');eg.addColorStop(1,'rgba(251,191,36,0)');
-    c.fillStyle=eg;c.beginPath();c.arc(x,y-6,5,0,Math.PI*2);c.fill();c.globalAlpha=1;
+    var eg=c.createRadialGradient(x,y-(5+tier),0,x,y-(5+tier),eyeR);
+    eg.addColorStop(0,'#fff');eg.addColorStop(0.4,['#fbbf24','#60a5fa','#38bdf8','#7dd3fc','#22d3ee','#e0f2fe'][Math.min(tier,5)]);
+    eg.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=eg;c.beginPath();c.arc(x,y-(5+tier),eyeR,0,Math.PI*2);c.fill();c.globalAlpha=1;
 
+  // ── CANNON ─────────────────────────────────────────────────────────────────
   } else if(type==='cannon'){
-    // Tank turret body
     c.save();c.translate(x,y);
-    c.fillStyle='#374151';c.fillRect(-10,0,20,10);
-    c.fillStyle='#4b5563';c.beginPath();c.arc(0,0,10,Math.PI,0);c.fill();
-    // Rotating turret
-    c.rotate(t.lastAngle||0);
-    c.fillStyle='#1f2937';c.fillRect(2,-4,16,8);
-    c.fillStyle='#6b7280';c.fillRect(17,-5,5,10);
-    // Barrel glow
     var cf=Math.max(0,1-(now-(t.lf||0))*6);
-    if(cf>0){c.globalAlpha=cf*0.8;c.fillStyle='#f97316';c.beginPath();c.arc(22,0,6,0,Math.PI*2);c.fill();c.globalAlpha=1;}
-    c.restore();
+
+    if(tier===0){
+      // T0: basic tank
+      c.fillStyle='#374151';c.fillRect(-9,1,18,9);
+      c.fillStyle='#4b5563';c.beginPath();c.arc(0,1,9,Math.PI,0);c.fill();
+      c.rotate(t.lastAngle||0);
+      c.fillStyle='#1f2937';c.fillRect(2,-3.5,15,7);
+      c.fillStyle='#6b7280';c.fillRect(15,-4,5,8);
+    } else if(tier===1){
+      // T1: heavier plating
+      c.fillStyle='#4b5563';c.fillRect(-10,1,20,10);
+      c.fillStyle='#6b7280';c.beginPath();c.arc(0,1,10,Math.PI,0);c.fill();
+      c.fillStyle='#374151';c.fillRect(-12,4,5,5);c.fillRect(7,4,5,5); // side armour
+      c.rotate(t.lastAngle||0);
+      c.fillStyle='#374151';c.fillRect(2,-4,17,8);
+      c.fillStyle='#9ca3af';c.fillRect(17,-4.5,5,9);
+    } else if(tier===2){
+      // T2: double barrel + reinforced tracks
+      c.fillStyle='#374151';c.fillRect(-11,0,22,11);
+      c.fillStyle='#6b7280';c.beginPath();c.arc(0,0,11,Math.PI,0);c.fill();
+      c.fillStyle='#4b5563';c.fillRect(-14,3,5,6);c.fillRect(9,3,5,6);
+      c.rotate(t.lastAngle||0);
+      c.fillStyle='#374151';c.fillRect(2,-5.5,17,5);c.fillRect(2,.5,17,5); // dual barrel
+      c.fillStyle='#9ca3af';c.fillRect(17,-6,5,11);
+    } else if(tier===3){
+      // T3: MOAB shredder — wide cannon + orange glow
+      c.fillStyle='#1f2937';c.fillRect(-12,0,24,12);
+      c.fillStyle='#374151';c.beginPath();c.arc(0,0,12,Math.PI,0);c.fill();
+      c.fillStyle='#92400e';c.fillRect(-15,3,5,7);c.fillRect(10,3,5,7);
+      c.rotate(t.lastAngle||0);
+      c.fillStyle='#292524';c.fillRect(2,-6,20,12);
+      c.fillStyle='#78350f';c.fillRect(20,-7,7,14);
+      if(cf>0){c.globalAlpha=cf*0.9;c.shadowColor='#f97316';c.shadowBlur=10;
+        c.fillStyle='#fbbf24';c.beginPath();c.arc(27,0,7,0,Math.PI*2);c.fill();c.shadowBlur=0;c.globalAlpha=1;}
+    } else if(tier===4){
+      // T4: apocalypse — spiked fortress cannon
+      var cg4=c.createRadialGradient(0,0,3,0,0,13);
+      cg4.addColorStop(0,'#450a0a');cg4.addColorStop(1,'#1c0505');
+      c.fillStyle=cg4;c.beginPath();c.arc(0,0,13,0,Math.PI*2);c.fill();
+      for(var sp=0;sp<8;sp++){var sa=sp/8*Math.PI*2+now*0.3;
+        c.fillStyle='#7f1d1d';c.beginPath();c.moveTo(Math.cos(sa)*10,Math.sin(sa)*10);
+        c.lineTo(Math.cos(sa+0.2)*14,Math.sin(sa+0.2)*14);
+        c.lineTo(Math.cos(sa-0.2)*14,Math.sin(sa-0.2)*14);c.closePath();c.fill();}
+      c.shadowColor='#ef4444';c.shadowBlur=12+pulse*6;
+      c.strokeStyle='#ef4444';c.lineWidth=2;c.beginPath();c.arc(0,0,13,0,Math.PI*2);c.stroke();
+      c.shadowBlur=0;
+      c.rotate(t.lastAngle||0);
+      c.fillStyle='#450a0a';c.fillRect(2,-8,24,16);
+      c.fillStyle='#dc2626';c.fillRect(24,-8,8,16);
+    } else {
+      // T5: WORLD ENDER — nuclear siege platform
+      c.rotate(spin*0.05);
+      var cg5=c.createRadialGradient(0,0,2,0,0,14);
+      cg5.addColorStop(0,'#7f1d1d');cg5.addColorStop(0.5,'#450a0a');cg5.addColorStop(1,'#1c0505');
+      c.fillStyle=cg5;c.beginPath();c.arc(0,0,14,0,Math.PI*2);c.fill();
+      // Nuke symbol rings
+      c.globalAlpha=0.4+0.3*pulse;
+      c.strokeStyle='#fca5a5';c.lineWidth=1;
+      c.beginPath();c.arc(0,0,10,0,Math.PI*2);c.stroke();
+      c.beginPath();c.arc(0,0,6,0,Math.PI*2);c.stroke();
+      c.globalAlpha=1;
+      c.shadowColor='#ef4444';c.shadowBlur=18+pulse*10;
+      c.strokeStyle='#ef4444';c.lineWidth=3;c.beginPath();c.arc(0,0,14,0,Math.PI*2);c.stroke();
+      c.shadowBlur=0;
+      c.restore();c.save();c.translate(x,y);c.rotate(t.lastAngle||0);
+      c.shadowColor='#ef4444';c.shadowBlur=10;
+      c.fillStyle='#7f1d1d';c.fillRect(2,-9,26,18);
+      c.fillStyle='#fca5a5';c.fillRect(26,-5,10,10);
+      c.fillStyle='#450a0a';
+      for(var nb=0;nb<3;nb++)c.fillRect(6+nb*6,-9,3,18);
+      c.shadowBlur=0;
+    }
     // Treads
+    c.restore();c.save();c.translate(x,y);
+    var treadR=3+Math.min(tier,3)*0.5;
     c.fillStyle='#111827';
-    c.beginPath();c.arc(x-7,y+8,4,0,Math.PI*2);c.fill();
-    c.beginPath();c.arc(x+7,y+8,4,0,Math.PI*2);c.fill();
-    // Tread animation
+    c.beginPath();c.arc(-(7+tier),8+tier*0.3,treadR+1,0,Math.PI*2);c.fill();
+    c.beginPath();c.arc(7+tier,8+tier*0.3,treadR+1,0,Math.PI*2);c.fill();
     c.strokeStyle='#374151';c.lineWidth=2;
-    for(var tr=0;tr<4;tr++){var to=((now*20)%8)+tr*8;c.beginPath();c.arc(x-7,y+8,4,to*.1,to*.1+.6);c.stroke();c.beginPath();c.arc(x+7,y+8,4,to*.1,to*.1+.6);c.stroke();}
+    for(var tr=0;tr<4;tr++){var to2=((now*20)%8)+tr*8;
+      c.beginPath();c.arc(-(7+tier),8+tier*0.3,treadR+1,to2*.1,to2*.1+.6);c.stroke();
+      c.beginPath();c.arc(7+tier,8+tier*0.3,treadR+1,to2*.1,to2*.1+.6);c.stroke();}
+    c.restore();
+    return; // early return — already restored above
 
+  // ── ICE / FREEZE ───────────────────────────────────────────────────────────
   } else if(type==='freeze'){
-    // Cryo tower — rotating ice crystals
-    c.save();c.translate(x,y);c.rotate(spin*0.5);
-    c.strokeStyle='rgba(165,243,252,0.5)';c.lineWidth=1.5;
-    for(var ci=0;ci<6;ci++){var ca=(ci/6)*Math.PI*2;c.beginPath();c.moveTo(0,0);c.lineTo(Math.cos(ca)*13,Math.sin(ca)*13);c.stroke();}
-    c.restore();
-    // Core
-    c.fillStyle='#0e7490';c.fillRect(x-5,y-2,10,12);
-    c.fillStyle='#a5f3fc';c.beginPath();c.moveTo(x,y-17);c.lineTo(x-5,y-5);c.lineTo(x+5,y-5);c.closePath();c.fill();
-    // Frost aura pulse
-    c.globalAlpha=0.12+0.1*pulse;c.fillStyle='#a5f3fc';
-    c.beginPath();c.arc(x,y,14,0,Math.PI*2);c.fill();c.globalAlpha=1;
-    // Snowflake center
-    c.strokeStyle='#e0f7ff';c.lineWidth=1.5;
-    for(var sf=0;sf<4;sf++){var sa2=(sf/4)*Math.PI+spin*0.3;c.beginPath();c.moveTo(x+Math.cos(sa2)*3,y+Math.sin(sa2)*3);c.lineTo(x+Math.cos(sa2)*9,y+Math.sin(sa2)*9);c.stroke();}
+    c.save();c.translate(x,y);
 
+    if(tier===0){
+      // T0: simple spire + 4 crystal rays
+      c.rotate(spin*0.5);c.strokeStyle='rgba(165,243,252,0.4)';c.lineWidth=1.5;
+      for(var ci=0;ci<4;ci++){var ca2=(ci/4)*Math.PI*2;c.beginPath();c.moveTo(0,0);c.lineTo(Math.cos(ca2)*11,Math.sin(ca2)*11);c.stroke();}
+      c.restore();c.save();c.translate(x,y);
+      c.fillStyle='#0e7490';c.fillRect(-4,-1,8,11);
+      c.fillStyle='#a5f3fc';c.beginPath();c.moveTo(0,-15);c.lineTo(-4,-3);c.lineTo(4,-3);c.closePath();c.fill();
+    } else if(tier===1){
+      // T1: 6 rays + bigger spire
+      c.rotate(spin*0.45);c.strokeStyle='rgba(165,243,252,0.55)';c.lineWidth=1.5;
+      for(var ci1=0;ci1<6;ci1++){var ca3=(ci1/6)*Math.PI*2;c.beginPath();c.moveTo(0,0);c.lineTo(Math.cos(ca3)*13,Math.sin(ca3)*13);c.stroke();}
+      c.restore();c.save();c.translate(x,y);
+      c.fillStyle='#155e75';c.fillRect(-5,-2,10,12);
+      c.fillStyle='#a5f3fc';c.beginPath();c.moveTo(0,-18);c.lineTo(-5,-4);c.lineTo(5,-4);c.closePath();c.fill();
+      c.fillStyle='rgba(165,243,252,0.3)';c.beginPath();c.arc(0,0,10,0,Math.PI*2);c.fill();
+    } else if(tier===2){
+      // T2: double spire + aura ring
+      c.rotate(spin*0.4);c.strokeStyle='rgba(165,243,252,0.65)';c.lineWidth=2;
+      for(var ci2=0;ci2<8;ci2++){var ca4=(ci2/8)*Math.PI*2;c.beginPath();c.moveTo(0,0);c.lineTo(Math.cos(ca4)*14,Math.sin(ca4)*14);c.stroke();}
+      c.restore();c.save();c.translate(x,y);
+      c.fillStyle='#164e63';c.fillRect(-5,-2,10,12);
+      c.fillStyle='#a5f3fc';c.beginPath();c.moveTo(-3,-18);c.lineTo(-6,-4);c.lineTo(0,-4);c.closePath();c.fill();
+      c.beginPath();c.moveTo(3,-18);c.lineTo(0,-4);c.lineTo(6,-4);c.closePath();c.fill();
+      c.globalAlpha=0.15+0.1*pulse;c.fillStyle='#a5f3fc';c.beginPath();c.arc(0,0,13,0,Math.PI*2);c.fill();c.globalAlpha=1;
+    } else if(tier===3){
+      // T3: permafrost — crown of spires + thick aura
+      c.rotate(spin*0.3);c.strokeStyle='rgba(165,243,252,0.8)';c.lineWidth=2;
+      for(var ci3=0;ci3<8;ci3++){var ca5=(ci3/8)*Math.PI*2;c.beginPath();c.moveTo(0,0);c.lineTo(Math.cos(ca5)*15,Math.sin(ca5)*15);c.stroke();}
+      c.restore();c.save();c.translate(x,y);
+      c.fillStyle='#0c4a6e';c.fillRect(-6,-2,12,13);
+      c.fillStyle='#7dd3fc';
+      for(var cs3=0;cs3<3;cs3++){var csx=(cs3-1)*5;
+        c.beginPath();c.moveTo(csx,-14-cs3*3);c.lineTo(csx-3,-3);c.lineTo(csx+3,-3);c.closePath();c.fill();}
+      c.shadowColor='#a5f3fc';c.shadowBlur=8;
+      c.globalAlpha=0.25+0.15*pulse;c.fillStyle='#a5f3fc';c.beginPath();c.arc(0,0,14,0,Math.PI*2);c.fill();
+      c.shadowBlur=0;c.globalAlpha=1;
+    } else if(tier===4){
+      // T4: absolute zero — ice fortress with orbit crystals
+      c.rotate(spin*0.2);
+      var ig4=c.createRadialGradient(0,0,2,0,0,12);
+      ig4.addColorStop(0,'#0c4a6e');ig4.addColorStop(1,'#042c3c');
+      c.fillStyle=ig4;c.beginPath();c.arc(0,0,12,0,Math.PI*2);c.fill();
+      // orbiting ice shards
+      for(var io=0;io<4;io++){var ioa=spin*1.5+(io/4)*Math.PI*2;
+        c.fillStyle='#7dd3fc';
+        c.beginPath();c.moveTo(Math.cos(ioa)*11,Math.sin(ioa)*11);
+        c.lineTo(Math.cos(ioa+0.35)*14,Math.sin(ioa+0.35)*14);
+        c.lineTo(Math.cos(ioa-0.35)*14,Math.sin(ioa-0.35)*14);c.closePath();c.fill();}
+      c.restore();c.save();c.translate(x,y);
+      c.shadowColor='#a5f3fc';c.shadowBlur=16+pulse*8;
+      c.strokeStyle='#a5f3fc';c.lineWidth=2.5;c.beginPath();c.arc(0,0,12,0,Math.PI*2);c.stroke();
+      c.shadowBlur=0;
+      c.fillStyle='#e0f2fe';c.beginPath();c.moveTo(0,-20);c.lineTo(-5,-5);c.lineTo(5,-5);c.closePath();c.fill();
+      c.globalAlpha=0.3+0.2*pulse;c.fillStyle='#a5f3fc';c.beginPath();c.arc(0,0,16,0,Math.PI*2);c.fill();c.globalAlpha=1;
+    } else {
+      // T5: FROSTPOCALYPSE — absolute ice god, map-wide slow corona
+      c.rotate(spin*0.15);
+      var ig5=c.createRadialGradient(0,0,1,0,0,14);
+      ig5.addColorStop(0,'#fff');ig5.addColorStop(0.3,'#7dd3fc');ig5.addColorStop(1,'#0c4a6e');
+      c.fillStyle=ig5;c.beginPath();c.arc(0,0,14,0,Math.PI*2);c.fill();
+      for(var io5=0;io5<6;io5++){var ioa5=spin*2+(io5/6)*Math.PI*2;
+        c.fillStyle='#e0f2fe';
+        c.beginPath();c.moveTo(Math.cos(ioa5)*12,Math.sin(ioa5)*12);
+        c.lineTo(Math.cos(ioa5+0.3)*17,Math.sin(ioa5+0.3)*17);
+        c.lineTo(Math.cos(ioa5-0.3)*17,Math.sin(ioa5-0.3)*17);c.closePath();c.fill();}
+      c.restore();c.save();c.translate(x,y);
+      c.shadowColor='#e0f2fe';c.shadowBlur=22+pulse*12;
+      c.strokeStyle='#e0f2fe';c.lineWidth=3;c.beginPath();c.arc(0,0,14,0,Math.PI*2);c.stroke();
+      c.strokeStyle='rgba(165,243,252,0.5)';c.lineWidth=1;
+      c.beginPath();c.arc(0,0,20,0,Math.PI*2);c.stroke();
+      c.shadowBlur=0;
+      c.globalAlpha=0.35+0.2*pulse;c.fillStyle='#bae6fd';c.beginPath();c.arc(0,0,19,0,Math.PI*2);c.fill();c.globalAlpha=1;
+    }
+    c.restore();
+    return;
+
+  // ── SNIPER ─────────────────────────────────────────────────────────────────
   } else if(type==='sniper'){
-    // Sniper nest — camo pattern
     c.save();c.translate(x,y);
-    c.fillStyle='#2d4a1e';c.fillRect(-9,4,18,10);
-    c.fillStyle='#1a2e10';c.fillRect(-10,-2,5,10);c.fillRect(5,-2,5,10);
-    // Scope barrel — long and thin
-    c.rotate(t.lastAngle||-Math.PI/4);
-    c.fillStyle='#1c1917';c.fillRect(0,-1.5,22,3);
-    c.fillStyle='#44403c';c.fillRect(22,-2,4,4);
-    // Scope lens glow
     var sf2=Math.max(0,1-(now-(t.lf||0))*4);
-    c.globalAlpha=0.4+sf2*0.6;
-    var sg2=c.createRadialGradient(24,0,0,24,0,4);
-    sg2.addColorStop(0,'#a5f3fc');sg2.addColorStop(1,'transparent');
-    c.fillStyle=sg2;c.beginPath();c.arc(24,0,4,0,Math.PI*2);c.fill();c.globalAlpha=1;
-    // Crosshair
-    c.strokeStyle='rgba(165,243,252,0.4)';c.lineWidth=1;
-    c.beginPath();c.moveTo(-2,0);c.lineTo(-8,0);c.stroke();
-    c.restore();
-    // Ghillie leaves
-    c.fillStyle='#15803d';
-    c.beginPath();c.ellipse(x-8,y-8,4,6,-0.5,0,Math.PI*2);c.fill();
-    c.beginPath();c.ellipse(x+8,y-7,5,5,0.3,0,Math.PI*2);c.fill();
 
+    if(tier===0){
+      // T0: camo nest + simple rifle
+      c.fillStyle='#2d4a1e';c.fillRect(-8,4,16,9);
+      c.fillStyle='#1a2e10';c.fillRect(-9,-2,4,9);c.fillRect(5,-2,4,9);
+      c.rotate(t.lastAngle||-Math.PI/4);
+      c.fillStyle='#1c1917';c.fillRect(0,-1.5,20,3);
+      c.fillStyle='#44403c';c.fillRect(20,-2,4,4);
+    } else if(tier===1){
+      // T1: wider nest, scoped rifle
+      c.fillStyle='#365314';c.fillRect(-9,3,18,10);
+      c.fillStyle='#1a2e10';c.fillRect(-11,-2,5,10);c.fillRect(6,-2,5,10);
+      c.rotate(t.lastAngle||-Math.PI/4);
+      c.fillStyle='#1c1917';c.fillRect(0,-2,22,4);
+      c.fillStyle='#57534e';c.fillRect(8,-4,8,4); // scope body
+      c.fillStyle='#44403c';c.fillRect(22,-2.5,5,5);
+    } else if(tier===2){
+      // T2: armored nest + suppressor
+      c.fillStyle='#3f6212';c.fillRect(-10,3,20,11);
+      c.fillStyle='#1a2e10';c.fillRect(-12,-2,6,10);c.fillRect(6,-2,6,10);
+      c.fillStyle='#4d7c0f';c.beginPath();c.arc(0,6,7,Math.PI,0);c.fill();
+      c.rotate(t.lastAngle||-Math.PI/4);
+      c.fillStyle='#292524';c.fillRect(0,-2,24,4);
+      c.fillStyle='#57534e';c.fillRect(6,-4,10,4);
+      c.fillStyle='#78716c';c.fillRect(23,-3,7,6); // suppressor
+    } else if(tier===3){
+      // T3: rail gun mount + scope glow
+      c.fillStyle='#3b0764';c.fillRect(-10,3,20,11);
+      c.fillStyle='#2e1065';c.fillRect(-12,-2,6,10);c.fillRect(6,-2,6,10);
+      c.fillStyle='#5b21b6';c.beginPath();c.arc(0,5,8,Math.PI,0);c.fill();
+      c.globalAlpha=0.2+0.15*pulse;c.fillStyle='#c084fc';c.beginPath();c.arc(0,5,9,0,Math.PI*2);c.fill();c.globalAlpha=1;
+      c.rotate(t.lastAngle||-Math.PI/4);
+      c.fillStyle='#1e1b4b';c.fillRect(0,-2.5,26,5);
+      c.fillStyle='#7c3aed';c.fillRect(8,-5,12,5);
+      c.fillStyle='#a78bfa';c.fillRect(25,-3,7,6);
+    } else if(tier===4){
+      // T4: railgun — hovering platform with energy coils
+      c.rotate(spin*0.05);
+      var sg4=c.createRadialGradient(0,0,2,0,0,12);
+      sg4.addColorStop(0,'#3b0764');sg4.addColorStop(1,'#1e0533');
+      c.fillStyle=sg4;c.beginPath();c.arc(0,0,12,0,Math.PI*2);c.fill();
+      // energy arc decorations
+      c.globalAlpha=0.5+0.3*pulse;
+      c.strokeStyle='#c084fc';c.lineWidth=1.5;
+      c.beginPath();c.arc(0,0,9,0,Math.PI*2);c.stroke();
+      c.globalAlpha=1;
+      c.restore();c.save();c.translate(x,y);
+      c.rotate(t.lastAngle||0);
+      c.shadowColor='#a78bfa';c.shadowBlur=10;
+      c.fillStyle='#4c1d95';c.fillRect(0,-3,28,6);
+      c.fillStyle='#c084fc';c.fillRect(26,-3,10,6);
+      c.fillStyle='#7c3aed';c.fillRect(6,-5,4,4);c.fillRect(14,-5,4,4);c.fillRect(22,-5,4,4); // coil segments
+      c.shadowBlur=0;
+    } else {
+      // T5: ANNIHILATOR — void cannon, hits all enemies
+      c.rotate(spin*0.04);
+      var sg5=c.createRadialGradient(0,0,1,0,0,14);
+      sg5.addColorStop(0,'#fff');sg5.addColorStop(0.2,'#c084fc');sg5.addColorStop(1,'#1e0533');
+      c.fillStyle=sg5;c.beginPath();c.arc(0,0,14,0,Math.PI*2);c.fill();
+      // void rings
+      for(var vr=0;vr<3;vr++){c.globalAlpha=0.3+vr*0.1;
+        c.strokeStyle='#e9d5ff';c.lineWidth=1;
+        c.beginPath();c.arc(0,0,5+vr*4,0,Math.PI*2);c.stroke();}
+      c.globalAlpha=1;
+      c.restore();c.save();c.translate(x,y);
+      c.rotate(t.lastAngle||0);
+      c.shadowColor='#c084fc';c.shadowBlur=20+pulse*12;
+      c.fillStyle='#2e1065';c.fillRect(0,-4,32,8);
+      c.fillStyle='#7c3aed';c.fillRect(0,-6,6,12); // breech block
+      c.fillStyle='#e9d5ff';c.fillRect(30,-2,10,4);
+      c.fillStyle='#6d28d9';
+      for(var vb=0;vb<4;vb++)c.fillRect(8+vb*6,-4,3,8);
+      c.shadowBlur=0;
+    }
+    // Scope lens glow
+    c.restore();c.save();c.translate(x,y);c.rotate(t.lastAngle||-Math.PI/4);
+    if(sf2>0){c.globalAlpha=0.4+sf2*0.6;
+      var sg3=c.createRadialGradient(20+tier*2,0,0,20+tier*2,0,5+tier);
+      sg3.addColorStop(0,['#a5f3fc','#7dd3fc','#38bdf8','#a78bfa','#c084fc','#e9d5ff'][Math.min(tier,5)]);
+      sg3.addColorStop(1,'transparent');
+      c.fillStyle=sg3;c.beginPath();c.arc(20+tier*2,0,5+tier,0,Math.PI*2);c.fill();c.globalAlpha=1;}
+    c.restore();
+    // Ghillie / camo — fades as tier increases (becomes more mechanical)
+    if(tier<3){c.fillStyle=['#15803d','#15803d','#4d7c0f'][tier];
+      c.beginPath();c.ellipse(x-8,y-8,3+tier,5+tier,-0.5,0,Math.PI*2);c.fill();
+      c.beginPath();c.ellipse(x+8,y-7,4+tier,4+tier,0.3,0,Math.PI*2);c.fill();}
+    return;
+
+  // ── LASER ──────────────────────────────────────────────────────────────────
   } else if(type==='laser'){
-    // Laser tower — energy coil
     c.save();c.translate(x,y);
-    c.fillStyle='#1e1b4b';c.beginPath();c.arc(0,7,9,0,Math.PI*2);c.fill();
-    c.fillStyle='#312e81';c.fillRect(-5,-9,10,16);
-    // Spinning energy rings
-    c.save();c.rotate(spin);
-    c.globalAlpha=0.5+0.3*pulse;
-    c.strokeStyle='#f43f5e';c.lineWidth=1.5;
-    c.beginPath();c.ellipse(0,-3,9,4,0,0,Math.PI*2);c.stroke();
-    c.restore();
-    c.save();c.rotate(-spin*1.5);
-    c.globalAlpha=0.3+0.3*pulse;
-    c.strokeStyle='#c084fc';c.lineWidth=1;
-    c.beginPath();c.ellipse(0,-3,11,5,Math.PI/4,0,Math.PI*2);c.stroke();
-    c.restore();
-    c.globalAlpha=1;
-    // Core crystal
-    var lg=c.createRadialGradient(0,-3,0,0,-3,8);
-    lg.addColorStop(0,'#fff');lg.addColorStop(0.3,'#f43f5e');lg.addColorStop(1,'rgba(244,63,94,0)');
-    c.fillStyle=lg;c.beginPath();c.arc(0,-3,8,0,Math.PI*2);c.fill();
-    // Emit tip
-    c.rotate(t.lastAngle||0);
     var lf2=Math.max(0,1-(now-(t.lf||0))*10);
-    c.globalAlpha=0.4+lf2*0.6;c.fillStyle='#f43f5e';
-    c.beginPath();c.arc(14,0,3,0,Math.PI*2);c.fill();c.globalAlpha=1;
+    var lasCol=['#f43f5e','#fb7185','#f43f5e','#c026d3','#7c3aed','#a855f7'][Math.min(tier,5)];
+
+    if(tier===0){
+      // T0: energy coil — basic
+      c.fillStyle='#1e1b4b';c.beginPath();c.arc(0,6,8,0,Math.PI*2);c.fill();
+      c.fillStyle='#312e81';c.fillRect(-4,-8,8,14);
+      c.save();c.rotate(spin);c.globalAlpha=0.5;c.strokeStyle='#f43f5e';c.lineWidth=1.5;
+      c.beginPath();c.ellipse(0,-2,8,3.5,0,0,Math.PI*2);c.stroke();c.restore();c.globalAlpha=1;
+      var lg0=c.createRadialGradient(0,-2,0,0,-2,7);
+      lg0.addColorStop(0,'#fff');lg0.addColorStop(0.4,'#f43f5e');lg0.addColorStop(1,'transparent');
+      c.fillStyle=lg0;c.beginPath();c.arc(0,-2,7,0,Math.PI*2);c.fill();
+    } else if(tier===1){
+      // T1: dual rings
+      c.fillStyle='#1e1b4b';c.beginPath();c.arc(0,7,9,0,Math.PI*2);c.fill();
+      c.fillStyle='#312e81';c.fillRect(-5,-9,10,16);
+      c.save();c.rotate(spin);c.globalAlpha=0.55;c.strokeStyle='#f43f5e';c.lineWidth=1.5;
+      c.beginPath();c.ellipse(0,-3,9,4,0,0,Math.PI*2);c.stroke();c.restore();
+      c.save();c.rotate(-spin*1.3);c.globalAlpha=0.35;c.strokeStyle='#c084fc';c.lineWidth=1;
+      c.beginPath();c.ellipse(0,-3,11,5,Math.PI/4,0,Math.PI*2);c.stroke();c.restore();c.globalAlpha=1;
+      var lg1=c.createRadialGradient(0,-3,0,0,-3,8);
+      lg1.addColorStop(0,'#fff');lg1.addColorStop(0.3,'#f43f5e');lg1.addColorStop(1,'transparent');
+      c.fillStyle=lg1;c.beginPath();c.arc(0,-3,8,0,Math.PI*2);c.fill();
+    } else if(tier===2){
+      // T2: triple rings + larger crystal
+      c.fillStyle='#1e1b4b';c.beginPath();c.arc(0,7,10,0,Math.PI*2);c.fill();
+      c.fillStyle='#312e81';c.fillRect(-6,-10,12,17);
+      for(var lr2=0;lr2<3;lr2++){c.save();c.rotate(spin*(1-lr2*0.3)+lr2*Math.PI/3);
+        c.globalAlpha=0.5-lr2*0.1;c.strokeStyle=lr2===0?'#f43f5e':'#c084fc';c.lineWidth=1.5;
+        c.beginPath();c.ellipse(0,-3,9+lr2*2,4+lr2,0,0,Math.PI*2);c.stroke();c.restore();}
+      c.globalAlpha=1;
+      var lg2=c.createRadialGradient(0,-3,0,0,-3,10);
+      lg2.addColorStop(0,'#fff');lg2.addColorStop(0.2,'#fb7185');lg2.addColorStop(1,'transparent');
+      c.fillStyle=lg2;c.beginPath();c.arc(0,-3,10,0,Math.PI*2);c.fill();
+    } else if(tier===3){
+      // T3: burn mode — molten core + lava rings
+      c.fillStyle='#431407';c.beginPath();c.arc(0,6,11,0,Math.PI*2);c.fill();
+      c.fillStyle='#7c2d12';c.fillRect(-6,-10,12,16);
+      for(var lr3=0;lr3<3;lr3++){c.save();c.rotate(spin*(1.5-lr3*0.4));
+        c.globalAlpha=0.6;c.strokeStyle=lr3===0?'#f97316':'#fbbf24';c.lineWidth=2;
+        c.beginPath();c.ellipse(0,-3,10+lr3*2,5,0,0,Math.PI*2);c.stroke();c.restore();}
+      c.globalAlpha=1;c.shadowColor='#f97316';c.shadowBlur=8;
+      var lg3=c.createRadialGradient(0,-3,0,0,-3,11);
+      lg3.addColorStop(0,'#fff');lg3.addColorStop(0.2,'#fbbf24');lg3.addColorStop(0.6,'#f97316');lg3.addColorStop(1,'transparent');
+      c.fillStyle=lg3;c.beginPath();c.arc(0,-3,11,0,Math.PI*2);c.fill();c.shadowBlur=0;
+    } else if(tier===4){
+      // T4: plasma core — violet/purple
+      c.fillStyle='#2e1065';c.beginPath();c.arc(0,6,12,0,Math.PI*2);c.fill();
+      c.fillStyle='#4c1d95';c.fillRect(-7,-11,14,17);
+      for(var lr4=0;lr4<4;lr4++){c.save();c.rotate(spin*(2-lr4*0.4)+lr4*Math.PI/4);
+        c.globalAlpha=0.55;c.strokeStyle=lr4%2===0?'#7c3aed':'#c084fc';c.lineWidth=2;
+        c.beginPath();c.ellipse(0,-3,11+lr4*2,5+lr4,0,0,Math.PI*2);c.stroke();c.restore();}
+      c.globalAlpha=1;c.shadowColor='#a855f7';c.shadowBlur=14;
+      var lg4=c.createRadialGradient(0,-3,0,0,-3,13);
+      lg4.addColorStop(0,'#fff');lg4.addColorStop(0.15,'#e9d5ff');lg4.addColorStop(0.5,'#7c3aed');lg4.addColorStop(1,'transparent');
+      c.fillStyle=lg4;c.beginPath();c.arc(0,-3,13,0,Math.PI*2);c.fill();c.shadowBlur=0;
+    } else {
+      // T5: SUPERNOVA — swirling cosmic horror
+      for(var lr5=0;lr5<5;lr5++){c.save();c.rotate(spin*(2.5-lr5*0.4)+lr5*Math.PI/5);
+        c.globalAlpha=0.55+0.2*pulse;c.strokeStyle=['#a855f7','#c084fc','#e879f9','#f0abfc','#fae8ff'][lr5];c.lineWidth=2;
+        c.beginPath();c.ellipse(0,-3,12+lr5*2,6+lr5,0,0,Math.PI*2);c.stroke();c.restore();}
+      c.globalAlpha=1;c.shadowColor='#c084fc';c.shadowBlur=20+pulse*14;
+      var lg5=c.createRadialGradient(0,-3,0,0,-3,15);
+      lg5.addColorStop(0,'#fff');lg5.addColorStop(0.1,'#fae8ff');lg5.addColorStop(0.4,'#a855f7');lg5.addColorStop(1,'transparent');
+      c.fillStyle=lg5;c.beginPath();c.arc(0,-3,15,0,Math.PI*2);c.fill();
+      c.strokeStyle='rgba(233,213,255,0.6)';c.lineWidth=1;c.beginPath();c.arc(0,-3,19,0,Math.PI*2);c.stroke();
+      c.shadowBlur=0;
+    }
+    // Emit barrel tip
+    c.restore();c.save();c.translate(x,y);c.rotate(t.lastAngle||0);
+    c.globalAlpha=0.4+lf2*0.6;c.fillStyle=lasCol;
+    if(tier>=4)c.shadowColor=lasCol,c.shadowBlur=8;
+    c.beginPath();c.arc(13+tier*1.5,0,3+tier*0.5,0,Math.PI*2);c.fill();
+    c.shadowBlur=0;c.globalAlpha=1;
     c.restore();
-
+    return;
   }
 
-  // Upgrade pips
-  if(t.upA>0||t.upB>0){
-    for(var ua=0;ua<(t.upA||0);ua++){var aa=-Math.PI/2+(ua-1)*.6;c.fillStyle='#22c55e';c.beginPath();c.arc(x+Math.cos(aa)*17,y+Math.sin(aa)*17,2.5,0,Math.PI*2);c.fill();}
-    for(var ub=0;ub<(t.upB||0);ub++){var ab=Math.PI/2+(ub-1)*.6;c.fillStyle='#f59e0b';c.beginPath();c.arc(x+Math.cos(ab)*17,y+Math.sin(ab)*17,2.5,0,Math.PI*2);c.fill();}
-  }
+  // ── TIER BADGE replaces pips ───────────────────────────────────────────────
   c.restore();
+  if(tier>0){
+    var badgeCol=tier>=5?'#f5c842':tier>=4?(pathA?'#86efac':'#fb923c'):tier>=3?(pathA?'#4ade80':'#f97316'):'#60a5fa';
+    c.font='bold '+(7+tier)+'px sans-serif';c.textAlign='center';c.textBaseline='middle';
+    c.shadowColor=badgeCol;c.shadowBlur=tier>=4?8:4;
+    c.fillStyle=badgeCol;
+    c.fillText(tier>=5?'★':(tier>=4?'◆':String(tier)),x,y+(baseR+6));
+    c.shadowBlur=0;
+  }
+  return;
 }
 
 function drawHero(c,h,sel){
@@ -790,8 +1123,14 @@ function drawHero(c,h,sel){
   c.beginPath();c.arc(x,y,18,0,Math.PI*2);c.fill();c.stroke();
   c.font='15px serif';c.textAlign='center';c.textBaseline='middle';
   c.fillText(hd.icon,x,y);
-  for(var ua=0;ua<(h.upA||0);ua++){var aa=-Math.PI/2+(ua-1)*.5;c.fillStyle='#22c55e';c.beginPath();c.arc(x+Math.cos(aa)*17,y+Math.sin(aa)*17,2.5,0,Math.PI*2);c.fill();}
-  for(var ub=0;ub<(h.upB||0);ub++){var ab=Math.PI/2+(ub-1)*.5;c.fillStyle=hd.color;c.beginPath();c.arc(x+Math.cos(ab)*17,y+Math.sin(ab)*17,2.5,0,Math.PI*2);c.fill();}
+  var htier=Math.max(h.upA||0,h.upB||0);
+  if(htier>0){
+    var hbadgeCol=htier>=3?'#f5c842':hd.color;
+    c.font='bold '+(7+htier*1.5)+'px sans-serif';c.textAlign='center';c.textBaseline='middle';
+    c.shadowColor=hbadgeCol;c.shadowBlur=htier>=3?10:5;
+    c.fillStyle=hbadgeCol;c.fillText(htier>=3?'★':String(htier),x,y+26);
+    c.shadowBlur=0;
+  }
   c.restore();
 }
 
