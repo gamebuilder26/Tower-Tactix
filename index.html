@@ -654,13 +654,23 @@ function drawTower(c,t,sel){
   var pathA=t.upA>0; // which path is active
   c.save();
 
-  // Shadow — elongated for elevated base
   var baseR=13+tier*1.5;
-  var innerR=baseR*0.62;
-  c.globalAlpha=0.32+tier*0.04;c.fillStyle='#000';
-  c.beginPath();c.ellipse(x+4,y+18,baseR+3,6,0,0,Math.PI*2);c.fill();c.globalAlpha=1;
+  var innerR=baseR*0.58;
+  var cylH=8;
 
-  // Elevated base — raised ring (top edge highlight = light from above)
+  // Ground shadow (soft, 3D)
+  c.globalAlpha=0.35+tier*0.03;c.fillStyle='#000';
+  c.beginPath();c.ellipse(x+5,y+baseR+cylH+4,baseR+4,5,0,0,Math.PI*2);c.fill();c.globalAlpha=1;
+
+  // 3D cylinder SIDE (dark band — light from top-left so right/bottom darker)
+  var sideG=c.createLinearGradient(x-baseR,y,x+baseR,y);
+  sideG.addColorStop(0,'#1a1a24');sideG.addColorStop(0.25,'#252532');sideG.addColorStop(0.5,'#2a2a38');
+  sideG.addColorStop(0.75,'#22222e');sideG.addColorStop(1,'#15151c');
+  c.fillStyle=sideG;
+  c.beginPath();c.ellipse(x,y+cylH*0.5,baseR,cylH*0.55,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='rgba(0,0,0,0.5)';c.lineWidth=1;c.stroke();
+
+  // 3D cylinder TOP (lit from top-left)
   var tierCols=[['#3a5070','#1e3555'],['#2a5535','#163520'],['#553520','#301808'],
                 ['#4a2060','#280d3a'],['#5a0a0a','#300505'],['#1a0a3a','#0a0020']];
   var dartTierCols=type==='dart'?[
@@ -668,30 +678,25 @@ function drawTower(c,t,sel){
     ['#06b6d4','#0891b2'],['#22d3ee','#06b6d4'],['#fde047','#eab308']
   ]:null;
   var tc=dartTierCols?dartTierCols[Math.min(tier,5)]:tierCols[Math.min(tier,5)];
-  var rimGrad=c.createRadialGradient(x-baseR*0.4,y-baseR*0.5,0,x,y,baseR);
-  rimGrad.addColorStop(0,sel?lighten(tc[0]):tc[0]);
-  rimGrad.addColorStop(0.5,tc[1]);
-  rimGrad.addColorStop(0.85,tc[1]);
-  rimGrad.addColorStop(1,'#0a0a12');
-  c.fillStyle=rimGrad;
+  var topG=c.createRadialGradient(x-baseR*0.6,y-baseR*0.5,0,x,y,baseR*1.2);
+  topG.addColorStop(0,sel?lighten(tc[0]):tc[0]);
+  topG.addColorStop(0.4,tc[1]);
+  topG.addColorStop(0.85,tc[1]);
+  topG.addColorStop(1,'#0c0c14');
+  c.fillStyle=topG;
   if(tier>=3&&type==='dart'){c.shadowColor=tier===5?'#fde047':tier===4?'#22d3ee':'#38bdf8';c.shadowBlur=10+pulse*6;}
   if(tier>=4&&type!=='dart'){var ringCol=tier===5?'#f5c842':pathA?'#22c55e':'#f97316';c.shadowColor=ringCol;c.shadowBlur=12+pulse*8;}
-  c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.fill();
-  c.shadowBlur=0;
-  c.strokeStyle='rgba(255,255,255,0.08)';c.lineWidth=1;c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.stroke();
-  c.strokeStyle='#0a0a12';c.lineWidth=2;c.beginPath();c.arc(x,y,baseR-1,0,Math.PI*2);c.stroke();
+  c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.fill();c.shadowBlur=0;
+  c.strokeStyle='rgba(255,255,255,0.12)';c.lineWidth=1.5;c.stroke();
 
-  // Recessed center — dipped, shaded (tower sits in here)
-  var recessGrad=c.createRadialGradient(x,y-2,innerR*0.2,x,y+2,innerR);
-  recessGrad.addColorStop(0,'#0d0d14');
-  recessGrad.addColorStop(0.4,'#12121c');
-  recessGrad.addColorStop(0.8,'#0a0a12');
-  recessGrad.addColorStop(1,'#050508');
-  c.fillStyle=recessGrad;c.beginPath();c.arc(x,y,innerR,0,Math.PI*2);c.fill();
-  c.strokeStyle='rgba(0,0,0,0.6)';c.lineWidth=1.5;c.beginPath();c.arc(x,y,innerR,0,Math.PI*2);c.stroke();
+  // Inner recess (tower sits in well)
+  var recessG=c.createRadialGradient(x,y-1,0,x,y,innerR);
+  recessG.addColorStop(0,'#0a0a10');recessG.addColorStop(0.6,'#08080c');recessG.addColorStop(1,'#040408');
+  c.fillStyle=recessG;c.beginPath();c.arc(x,y,innerR,0,Math.PI*2);c.fill();
+  c.strokeStyle='rgba(0,0,0,0.7)';c.lineWidth=1;c.stroke();
 
-  // Selection / tier ring on rim
-  c.strokeStyle=sel?'#f5c842':(type==='dart'&&tier>=2?(tier>=5?'#fde047':tier>=4?'#67e8f9':'#38bdf8'):(tier>=4?(pathA?'#22c55e':'#f97316'):'rgba(100,160,220,0.4)'));
+  // Selection / tier ring
+  c.strokeStyle=sel?'#f5c842':(type==='dart'&&tier>=2?(tier>=5?'#fde047':tier>=4?'#67e8f9':'#38bdf8'):(tier>=4?(pathA?'#22c55e':'#f97316'):'rgba(100,160,220,0.45)'));
   c.lineWidth=sel?2.5:(tier>=4||(type==='dart'&&tier>=2)?2.5:1);
   c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.stroke();
 
@@ -1164,44 +1169,71 @@ function drawHero(c,h,sel){
   c.restore();
 }
 
+function drawPath3D(c,W,H,path,hw,wallH,now){
+  var rngf=function(s){var x=Math.sin(s)*10000;return x-Math.floor(x);};
+  for(var i=0;i<path.length-1;i++){
+    var A=path[i],B=path[i+1];
+    var dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy);if(len<0.01)continue;
+    dx/=len;dy/=len;
+    var px=-dy,py=dx;
+    var lA={x:A.x+px*hw,y:A.y+py*hw},rA={x:A.x-px*hw,y:A.y-py*hw};
+    var lB={x:B.x+px*hw,y:B.y+py*hw},rB={x:B.x-px*hw,y:B.y-py*hw};
+    var lA2={x:lA.x,y:lA.y+wallH},lB2={x:lB.x,y:lB.y+wallH};
+    var rA2={x:rA.x,y:rA.y+wallH},rB2={x:rB.x,y:rB.y+wallH};
+    c.fillStyle='#0d0806';c.beginPath();c.moveTo(lA.x,lA.y);c.lineTo(lB.x,lB.y);c.lineTo(lB2.x,lB2.y);c.lineTo(lA2.x,lA2.y);c.closePath();c.fill();
+    c.fillStyle='#120a08';c.beginPath();c.moveTo(rA.x,rA.y);c.lineTo(rA2.x,rA2.y);c.lineTo(rB2.x,rB2.y);c.lineTo(rB.x,rB.y);c.closePath();c.fill();
+    var topG=c.createLinearGradient((lA.x+rA.x)/2-40,(lA.y+rA.y)/2-40,(lA.x+rA.x)/2+40,(lA.y+rA.y)/2+40);
+    topG.addColorStop(0,'#5c4535');topG.addColorStop(0.35,'#4a3526');topG.addColorStop(0.7,'#3d2a1e');topG.addColorStop(1,'#2d1f14');
+    c.fillStyle=topG;c.beginPath();c.moveTo(lA.x,lA.y);c.lineTo(rA.x,rA.y);c.lineTo(rB.x,rB.y);c.lineTo(lB.x,lB.y);c.closePath();c.fill();
+    c.strokeStyle='rgba(0,0,0,0.4)';c.lineWidth=1;c.stroke();
+  }
+  var pathGlow=0.15+0.1*Math.sin(now*0.9);
+  c.lineCap='round';c.lineJoin='round';c.beginPath();c.moveTo(path[0].x,path[0].y);
+  for(var j=1;j<path.length;j++)c.lineTo(path[j].x,path[j].y);
+  c.globalAlpha=pathGlow;c.strokeStyle='#ff4400';c.lineWidth=8;c.stroke();c.globalAlpha=1;
+}
+
 function draw(){
   var W=cv.width,H=cv.height,now=performance.now()/1000;
   cx.clearRect(0,0,W,H);
 
-  // ── HELLSCAPE BATTLEFIELD TERRAIN ──────────────────────────────────────────
-  // Dark volcanic base — deep charcoal with warm undertone
-  var groundGrad=cx.createLinearGradient(0,0,W*0.6,H);
-  groundGrad.addColorStop(0,'#1c1410');
-  groundGrad.addColorStop(0.35,'#211610');
-  groundGrad.addColorStop(0.7,'#1a100a');
-  groundGrad.addColorStop(1,'#150d08');
+  // ── 3D TERRAIN — perspective depth (darker toward horizon)
+  var groundGrad=cx.createLinearGradient(0,0,W*0.5,H*0.3);
+  groundGrad.addColorStop(0,'#0f0a08');
+  groundGrad.addColorStop(0.2,'#151010');
+  groundGrad.addColorStop(0.5,'#1a1210');
+  groundGrad.addColorStop(1,'#1c1410');
   cx.fillStyle=groundGrad;cx.fillRect(0,0,W,H);
+  var depthGrad=cx.createLinearGradient(0,0,0,H);
+  depthGrad.addColorStop(0,'rgba(0,0,0,0.35)');
+  depthGrad.addColorStop(0.4,'rgba(0,0,0,0)');
+  depthGrad.addColorStop(1,'rgba(0,0,0,0.08)');
+  cx.fillStyle=depthGrad;cx.fillRect(0,0,W,H);
 
   var rngf=function(s){var x=Math.sin(s)*10000;return x-Math.floor(x);};
 
-  // Stone tile grid — fake 3D floor with light from top-left
+  // Stone tile grid — perspective (tiles smaller toward top = depth)
   cx.save();
   var tileW=Math.round(W/11),tileH=Math.round(H/14);
   for(var tgx=0;tgx<12;tgx++){
     for(var tgy=0;tgy<15;tgy++){
-      var tx0=tgx*tileW,ty0=tgy*tileH;
+      var depth=0.72+0.28*(tgy/14);
+      var tw=Math.max(4,(tileW-2)*depth),th=Math.max(3,(tileH-2)*depth);
+      var tx0=tgx*tileW+(tileW-tw)/2,ty0=tgy*tileH+(tileH-th)/2;
       var tseed=tgx*37+tgy*91;
       var tvar=rngf(tseed)*0.12-0.06;
-      // Tile face — slightly lighter than base
-      cx.globalAlpha=0.55+tvar;
-      var r=Math.round(38+tvar*30),g=Math.round(28+tvar*20),b=Math.round(20+tvar*15);
+      cx.globalAlpha=0.5+tvar+(1-depth)*0.12;
+      var r=Math.round(36+tvar*28),g=Math.round(26+tvar*18),b=Math.round(18+tvar*12);
       cx.fillStyle='rgb('+r+','+g+','+b+')';
-      cx.fillRect(tx0+1,ty0+1,tileW-2,tileH-2);
-      // Top edge highlight (light from top-left)
-      cx.globalAlpha=0.18+tvar*0.5;
-      cx.fillStyle='#c8a882';
-      cx.fillRect(tx0+1,ty0+1,tileW-2,2);
-      cx.fillRect(tx0+1,ty0+1,2,tileH-2);
-      // Bottom-right shadow edge
-      cx.globalAlpha=0.22;
+      cx.fillRect(tx0+1,ty0+1,tw,th);
+      cx.globalAlpha=0.2+tvar*0.4;
+      cx.fillStyle='#b8a078';
+      cx.fillRect(tx0+1,ty0+1,tw,1);
+      cx.fillRect(tx0+1,ty0+1,1,th);
+      cx.globalAlpha=0.2;
       cx.fillStyle='#000';
-      cx.fillRect(tx0+tileW-2,ty0+1,2,tileH-1);
-      cx.fillRect(tx0+1,ty0+tileH-2,tileW-1,2);
+      cx.fillRect(tx0+tw,ty0+1,2,th+1);
+      cx.fillRect(tx0+1,ty0+th,tw+1,2);
     }
   }
   cx.globalAlpha=1;cx.restore();
@@ -1296,65 +1328,14 @@ function draw(){
     cx.globalAlpha=1;cx.restore();
   }
 
-  // ── HELL PATH ────────────────────────────────────────────────────────────
+  // ── 3D PATH RIBBON — shadow first, then raised road
   cx.lineCap='round';cx.lineJoin='round';
+  cx.globalAlpha=0.45;cx.strokeStyle='#000';cx.lineWidth=42;
   cx.beginPath();cx.moveTo(PP[0].x,PP[0].y);
-  for(var pi2=1;pi2<PP.length;pi2++)cx.lineTo(PP[pi2].x,PP[pi2].y);
-
-  // Deep drop shadow
-  cx.strokeStyle='rgba(0,0,0,0.7)';cx.lineWidth=52;cx.stroke();
-  // Outer dark border
-  cx.strokeStyle='#1a0a00';cx.lineWidth=46;cx.stroke();
-  // Dark stone base
-  cx.strokeStyle='#2d1f14';cx.lineWidth=40;cx.stroke();
-  // Mid stone — warm grey-brown cobble tone
-  cx.strokeStyle='#4a3526';cx.lineWidth=34;cx.stroke();
-  // Stone surface
-  cx.strokeStyle='#5c4535';cx.lineWidth=26;cx.stroke();
-  // Worn centre — lighter stones
-  cx.strokeStyle='#7a6248';cx.lineWidth=16;cx.stroke();
-  // Hot centre glow — lava seeping through cracks
-  var pathGlow=0.12+0.08*Math.sin(now*0.9);
-  cx.globalAlpha=pathGlow;
-  cx.strokeStyle='#ff4400';cx.lineWidth=6;cx.stroke();
-  cx.globalAlpha=1;
-
-  // Cobblestone mortar lines (grid overlay on path)
+  for(var pi2=1;pi2<PP.length;pi2++)cx.lineTo(PP[pi2].x,PP[pi2].y);cx.stroke();cx.globalAlpha=1;
   cx.save();
-  var pl2=pathLen();
-  for(var pbi=0;pbi<60;pbi++){
-    var pbseed=pbi*13.7,pbt=pbi/60;
-    var pp2=pathPos(pbt*pl2);
-    var pbx=pp2.x+(rngf(pbseed)*30-15),pby=pp2.y+(rngf(pbseed+1)*22-11);
-    var pbw=6+rngf(pbseed+4)*10,pbh=5+rngf(pbseed+5)*7;
-    var pba=rngf(pbseed+6)*Math.PI;
-    // Stone block face
-    cx.globalAlpha=0.12+rngf(pbseed+2)*0.1;
-    cx.fillStyle=rngf(pbseed+3)>0.5?'#8a7060':'#3a2818';
-    cx.beginPath();cx.ellipse(pbx,pby,pbw,pbh,pba,0,Math.PI*2);cx.fill();
-    // Stone highlight top-left
-    cx.globalAlpha=0.08;cx.fillStyle='#d4b896';
-    cx.beginPath();cx.ellipse(pbx-pbw*.3,pby-pbh*.3,pbw*.5,pbh*.4,pba,0,Math.PI*2);cx.fill();
-  }
-  // Lava crack dots along path centre
-  for(var lci=0;lci<25;lci++){
-    var lct=lci/25;
-    var lcp=pathPos(lct*pl2);
-    var lcPulse=0.4+0.35*Math.sin(now*2+lci*0.7);
-    cx.globalAlpha=lcPulse*0.6;
-    var lcg=cx.createRadialGradient(lcp.x,lcp.y,0,lcp.x,lcp.y,2.5);
-    lcg.addColorStop(0,'#ffcc44');lcg.addColorStop(0.5,'#ff4400');lcg.addColorStop(1,'transparent');
-    cx.fillStyle=lcg;cx.beginPath();cx.arc(lcp.x,lcp.y,2.5,0,Math.PI*2);cx.fill();
-  }
-  cx.globalAlpha=1;cx.restore();
-
-  // Outer lava edge glow
-  var edgePulse=0.18+0.1*Math.sin(now*1.2);
-  cx.beginPath();cx.moveTo(PP[0].x,PP[0].y);
-  for(var pi3=1;pi3<PP.length;pi3++)cx.lineTo(PP[pi3].x,PP[pi3].y);
-  cx.globalAlpha=edgePulse;
-  cx.strokeStyle='#ff3300';cx.lineWidth=50;cx.stroke();
-  cx.globalAlpha=1;
+  drawPath3D(cx,W,H,PP,20,10,now);
+  cx.restore();
 
   // Entry marker — glowing portal
   var inPulse=0.7+0.3*Math.sin(now*2);
@@ -1477,9 +1458,9 @@ function draw(){
     var bx=b3.x, by=b3.y+bob;
     var tier=b3.tierIdx||0;
     cx.save();
-    // Drop shadow
-    cx.globalAlpha=0.22;cx.fillStyle='#000';
-    cx.beginPath();cx.ellipse(bx,by+b3.sz+2,b3.sz*.7,3,0,0,Math.PI*2);cx.fill();
+    // 3D drop shadow (soft oval under bloon)
+    cx.globalAlpha=0.28;cx.fillStyle='#000';
+    cx.beginPath();cx.ellipse(bx,by+b3.sz+3,b3.sz*0.85,4,0,0,Math.PI*2);cx.fill();
     cx.globalAlpha=1;
 
     if(b3.boss){
@@ -1548,10 +1529,12 @@ function draw(){
       var scaleX=1+Math.sin(now*5+b3.id)*0.04; // breathing
 
       if(eidx<=1){
-        // Tier 0-1: Little imps (small round demons with horns)
+        // Tier 0-1: Little imps — 3D sphere (highlight top-left, shadow bottom-right)
         cx.save();cx.translate(bx,by+wobble);cx.scale(scaleX,1);
-        var ig=cx.createRadialGradient(-b3.sz*.2,-b3.sz*.2,1,0,0,b3.sz);
-        ig.addColorStop(0,lighten(fz2?'#a5f3fc':bn?'#fde68a':b3.col));ig.addColorStop(1,fz2?'#0891b2':bn?'#f97316':b3.col);
+        var bc=fz2?'#0891b2':bn?'#f97316':b3.col;
+        var ig=cx.createRadialGradient(-b3.sz*0.4,-b3.sz*0.4,0,0,0,b3.sz*1.4);
+        ig.addColorStop(0,'rgba(255,255,255,0.9)');ig.addColorStop(0.15,lighten(bc));
+        ig.addColorStop(0.5,bc);ig.addColorStop(0.85,'rgba(0,0,0,0.25)');ig.addColorStop(1,'rgba(0,0,0,0.4)');
         cx.fillStyle=ig;cx.beginPath();cx.arc(0,0,b3.sz,0,Math.PI*2);cx.fill();
         // Horns
         cx.fillStyle='#2d1b00';
@@ -1573,11 +1556,13 @@ function draw(){
         // Wings
         cx.beginPath();cx.moveTo(-2,-3);cx.quadraticCurveTo(-b3.sz*1.8,-b3.sz*.8+wingA*8,-b3.sz*2,b3.sz*.2);cx.quadraticCurveTo(-b3.sz,b3.sz*.1,-2,b3.sz*.2);cx.closePath();cx.fill();
         cx.beginPath();cx.moveTo(2,-3);cx.quadraticCurveTo(b3.sz*1.8,-b3.sz*.8+wingA*8,b3.sz*2,b3.sz*.2);cx.quadraticCurveTo(b3.sz,b3.sz*.1,2,b3.sz*.2);cx.closePath();cx.fill();
-        // Body
-        var gg=cx.createRadialGradient(-b3.sz*.25,-b3.sz*.25,1,0,0,b3.sz);
-        gg.addColorStop(0,lighten(fz2?'#a5f3fc':bn?'#fde68a':b3.col));gg.addColorStop(1,fz2?'#0891b2':bn?'#f97316':b3.col);
+        // Body — 3D sphere
+        var gc=fz2?'#0891b2':bn?'#f97316':b3.col;
+        var gg=cx.createRadialGradient(-b3.sz*0.35,-b3.sz*0.35,0,0,0,b3.sz*1.35);
+        gg.addColorStop(0,'rgba(255,255,255,0.85)');gg.addColorStop(0.2,lighten(gc));gg.addColorStop(0.55,gc);
+        gg.addColorStop(0.9,'rgba(0,0,0,0.2)');gg.addColorStop(1,'rgba(0,0,0,0.35)');
         cx.fillStyle=gg;cx.beginPath();cx.arc(0,0,b3.sz,0,Math.PI*2);cx.fill();
-        cx.strokeStyle='rgba(0,0,0,0.4)';cx.lineWidth=1.5;cx.stroke();
+        cx.strokeStyle='rgba(0,0,0,0.35)';cx.lineWidth=1.5;cx.stroke();
         // Eyes glow
         var eyeglow=0.7+0.3*Math.sin(now*6+b3.id);
         cx.globalAlpha=eyeglow;cx.fillStyle='#ffdd00';
@@ -1595,8 +1580,10 @@ function draw(){
         cx.beginPath();cx.arc(wispOff,5,b3.sz*.9,0,Math.PI*2);cx.fill();
         cx.beginPath();cx.arc(-wispOff*.7,8,b3.sz*.7,0,Math.PI*2);cx.fill();
         cx.globalAlpha=1;
-        var wg=cx.createRadialGradient(0,0,1,0,0,b3.sz);
-        wg.addColorStop(0,'#ffffff');wg.addColorStop(0.3,lighten(fz2?'#a5f3fc':bn?'#fde68a':b3.col));wg.addColorStop(1,fz2?'#0891b2':bn?'#f97316':b3.col);
+        var wc=fz2?'#0891b2':bn?'#f97316':b3.col;
+        var wg=cx.createRadialGradient(-b3.sz*0.3,-b3.sz*0.3,0,0,0,b3.sz*1.3);
+        wg.addColorStop(0,'rgba(255,255,255,0.95)');wg.addColorStop(0.25,lighten(wc));wg.addColorStop(0.6,wc);
+        wg.addColorStop(0.9,'rgba(0,0,0,0.15)');wg.addColorStop(1,'rgba(0,0,0,0.3)');
         cx.fillStyle=wg;cx.beginPath();cx.arc(0,0,b3.sz,0,Math.PI*2);cx.fill();
         // Face
         cx.globalAlpha=0.9+0.1*Math.sin(now*7+b3.id);
@@ -1611,10 +1598,12 @@ function draw(){
         // Spikes
         cx.fillStyle='#1a0a00';
         for(var sp=0;sp<6;sp++){var sa=(sp/6)*Math.PI*2;var sr=b3.sz+5+Math.sin(now*4+sp+b3.id)*2;cx.beginPath();cx.moveTo(Math.cos(sa)*(b3.sz-2),Math.sin(sa)*(b3.sz-2));cx.lineTo(Math.cos(sa+.25)*b3.sz*.5,Math.sin(sa+.25)*b3.sz*.5);cx.lineTo(Math.cos(sa)*sr,Math.sin(sa)*sr);cx.lineTo(Math.cos(sa-.25)*b3.sz*.5,Math.sin(sa-.25)*b3.sz*.5);cx.closePath();cx.fill();}
-        var hg=cx.createRadialGradient(-b3.sz*.2,-b3.sz*.2,2,0,0,b3.sz);
-        hg.addColorStop(0,lighten(fz2?'#a5f3fc':bn?'#fde68a':b3.col));hg.addColorStop(1,fz2?'#0891b2':bn?'#f97316':b3.col);
+        var hc=fz2?'#0891b2':bn?'#f97316':b3.col;
+        var hg=cx.createRadialGradient(-b3.sz*0.35,-b3.sz*0.35,0,0,0,b3.sz*1.4);
+        hg.addColorStop(0,'rgba(255,255,255,0.8)');hg.addColorStop(0.2,lighten(hc));hg.addColorStop(0.55,hc);
+        hg.addColorStop(0.88,'rgba(0,0,0,0.25)');hg.addColorStop(1,'rgba(0,0,0,0.4)');
         cx.fillStyle=hg;cx.beginPath();cx.arc(0,0,b3.sz,0,Math.PI*2);cx.fill();
-        cx.strokeStyle='rgba(255,200,0,0.3)';cx.lineWidth=2;cx.stroke();
+        cx.strokeStyle='rgba(255,200,0,0.35)';cx.lineWidth=2;cx.stroke();
         // Red eyes
         var reyeG=0.8+0.2*Math.sin(now*8+b3.id);
         cx.globalAlpha=reyeG;cx.fillStyle='#ff0000';
@@ -1630,9 +1619,11 @@ function draw(){
         cx.globalAlpha=aura;cx.strokeStyle=fz2?'#a5f3fc':bn?'#f97316':b3.col;cx.lineWidth=5;
         cx.beginPath();cx.arc(0,0,b3.sz+6,0,Math.PI*2);cx.stroke();
         cx.globalAlpha=1;
-        // Body
-        var dg=cx.createRadialGradient(-b3.sz*.3,-b3.sz*.3,2,0,0,b3.sz);
-        dg.addColorStop(0,lighten(fz2?'#a5f3fc':bn?'#fde68a':b3.col));dg.addColorStop(0.5,fz2?'#0891b2':bn?'#f97316':b3.col);dg.addColorStop(1,'#050510');
+        // Body — 3D sphere
+        var dc=fz2?'#0891b2':bn?'#f97316':b3.col;
+        var dg=cx.createRadialGradient(-b3.sz*0.4,-b3.sz*0.4,0,0,0,b3.sz*1.45);
+        dg.addColorStop(0,'rgba(255,255,255,0.7)');dg.addColorStop(0.2,lighten(dc));dg.addColorStop(0.5,dc);
+        dg.addColorStop(0.85,'#151520');dg.addColorStop(1,'#050510');
         cx.fillStyle=dg;cx.beginPath();cx.arc(0,0,b3.sz,0,Math.PI*2);cx.fill();
         // Glowing sigil eye
         var eyePulse=0.6+0.4*Math.sin(now*6+b3.id);
