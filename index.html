@@ -654,12 +654,13 @@ function drawTower(c,t,sel){
   var pathA=t.upA>0; // which path is active
   c.save();
 
-  // Shadow grows with tier
+  // Shadow — elongated for elevated base
   var baseR=13+tier*1.5;
-  c.globalAlpha=0.28+tier*0.04;c.fillStyle='#000';
-  c.beginPath();c.ellipse(x+3,y+17,baseR+1,5,0,0,Math.PI*2);c.fill();c.globalAlpha=1;
+  var innerR=baseR*0.62;
+  c.globalAlpha=0.32+tier*0.04;c.fillStyle='#000';
+  c.beginPath();c.ellipse(x+4,y+18,baseR+3,6,0,0,Math.PI*2);c.fill();c.globalAlpha=1;
 
-  // Base platform — tier-based colors (dart uses its own palette below when type==='dart')
+  // Elevated base — raised ring (top edge highlight = light from above)
   var tierCols=[['#3a5070','#1e3555'],['#2a5535','#163520'],['#553520','#301808'],
                 ['#4a2060','#280d3a'],['#5a0a0a','#300505'],['#1a0a3a','#0a0020']];
   var dartTierCols=type==='dart'?[
@@ -667,20 +668,32 @@ function drawTower(c,t,sel){
     ['#06b6d4','#0891b2'],['#22d3ee','#06b6d4'],['#fde047','#eab308']
   ]:null;
   var tc=dartTierCols?dartTierCols[Math.min(tier,5)]:tierCols[Math.min(tier,5)];
-  var baseGrad=c.createRadialGradient(x-4,y-4,2,x,y,baseR);
-  baseGrad.addColorStop(0,sel?lighten(tc[0]):tc[0]);
-  baseGrad.addColorStop(0.6,tc[1]);
-  baseGrad.addColorStop(1,tc[1]);
-  c.fillStyle=baseGrad;
+  var rimGrad=c.createRadialGradient(x-baseR*0.4,y-baseR*0.5,0,x,y,baseR);
+  rimGrad.addColorStop(0,sel?lighten(tc[0]):tc[0]);
+  rimGrad.addColorStop(0.5,tc[1]);
+  rimGrad.addColorStop(0.85,tc[1]);
+  rimGrad.addColorStop(1,'#0a0a12');
+  c.fillStyle=rimGrad;
   if(tier>=3&&type==='dart'){c.shadowColor=tier===5?'#fde047':tier===4?'#22d3ee':'#38bdf8';c.shadowBlur=10+pulse*6;}
-  if(tier>=4&&type!=='dart'){
-    var ringCol=tier===5?'#f5c842':pathA?'#22c55e':'#f97316';
-    c.shadowColor=ringCol;c.shadowBlur=12+pulse*8;
-  }
-  c.strokeStyle=sel?'#f5c842':(type==='dart'&&tier>=2?(tier>=5?'#fde047':tier>=4?'#67e8f9':'#38bdf8'):(tier>=4?(pathA?'#22c55e':'#f97316'):'rgba(100,160,220,0.5)'));
-  c.lineWidth=sel?2.5:(tier>=4||(type==='dart'&&tier>=2)?2.5:1.5);
-  c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.fill();c.stroke();
+  if(tier>=4&&type!=='dart'){var ringCol=tier===5?'#f5c842':pathA?'#22c55e':'#f97316';c.shadowColor=ringCol;c.shadowBlur=12+pulse*8;}
+  c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.fill();
   c.shadowBlur=0;
+  c.strokeStyle='rgba(255,255,255,0.08)';c.lineWidth=1;c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.stroke();
+  c.strokeStyle='#0a0a12';c.lineWidth=2;c.beginPath();c.arc(x,y,baseR-1,0,Math.PI*2);c.stroke();
+
+  // Recessed center — dipped, shaded (tower sits in here)
+  var recessGrad=c.createRadialGradient(x,y-2,innerR*0.2,x,y+2,innerR);
+  recessGrad.addColorStop(0,'#0d0d14');
+  recessGrad.addColorStop(0.4,'#12121c');
+  recessGrad.addColorStop(0.8,'#0a0a12');
+  recessGrad.addColorStop(1,'#050508');
+  c.fillStyle=recessGrad;c.beginPath();c.arc(x,y,innerR,0,Math.PI*2);c.fill();
+  c.strokeStyle='rgba(0,0,0,0.6)';c.lineWidth=1.5;c.beginPath();c.arc(x,y,innerR,0,Math.PI*2);c.stroke();
+
+  // Selection / tier ring on rim
+  c.strokeStyle=sel?'#f5c842':(type==='dart'&&tier>=2?(tier>=5?'#fde047':tier>=4?'#67e8f9':'#38bdf8'):(tier>=4?(pathA?'#22c55e':'#f97316'):'rgba(100,160,220,0.4)'));
+  c.lineWidth=sel?2.5:(tier>=4||(type==='dart'&&tier>=2)?2.5:1);
+  c.beginPath();c.arc(x,y,baseR,0,Math.PI*2);c.stroke();
 
   // Charge ring
   if(charge<1){
@@ -777,22 +790,25 @@ function drawTower(c,t,sel){
 
   // ── CANNON ─────────────────────────────────────────────────────────────────
   } else if(type==='cannon'){
+    var dtFire=now-(t.lf||0);
+    var cf=Math.max(0,1-dtFire*6);
+    var recoilPx=3.5*Math.exp(-dtFire*22);
+    var cangle=t.lastAngle||0;
     c.save();c.translate(x,y);
-    var cf=Math.max(0,1-(now-(t.lf||0))*6);
+    c.translate(-Math.cos(cangle)*recoilPx,-Math.sin(cangle)*recoilPx);
+    c.rotate(cangle);
 
     if(tier===0){
-      // T0: basic tank
+      // T0: basic tank — turret sits in recess
       c.fillStyle='#374151';c.fillRect(-9,1,18,9);
       c.fillStyle='#4b5563';c.beginPath();c.arc(0,1,9,Math.PI,0);c.fill();
-      c.rotate(t.lastAngle||0);
       c.fillStyle='#1f2937';c.fillRect(2,-3.5,15,7);
       c.fillStyle='#6b7280';c.fillRect(15,-4,5,8);
     } else if(tier===1){
       // T1: heavier plating
       c.fillStyle='#4b5563';c.fillRect(-10,1,20,10);
       c.fillStyle='#6b7280';c.beginPath();c.arc(0,1,10,Math.PI,0);c.fill();
-      c.fillStyle='#374151';c.fillRect(-12,4,5,5);c.fillRect(7,4,5,5); // side armour
-      c.rotate(t.lastAngle||0);
+      c.fillStyle='#374151';c.fillRect(-12,4,5,5);c.fillRect(7,4,5,5);
       c.fillStyle='#374151';c.fillRect(2,-4,17,8);
       c.fillStyle='#9ca3af';c.fillRect(17,-4.5,5,9);
     } else if(tier===2){
@@ -800,15 +816,13 @@ function drawTower(c,t,sel){
       c.fillStyle='#374151';c.fillRect(-11,0,22,11);
       c.fillStyle='#6b7280';c.beginPath();c.arc(0,0,11,Math.PI,0);c.fill();
       c.fillStyle='#4b5563';c.fillRect(-14,3,5,6);c.fillRect(9,3,5,6);
-      c.rotate(t.lastAngle||0);
-      c.fillStyle='#374151';c.fillRect(2,-5.5,17,5);c.fillRect(2,.5,17,5); // dual barrel
+      c.fillStyle='#374151';c.fillRect(2,-5.5,17,5);c.fillRect(2,.5,17,5);
       c.fillStyle='#9ca3af';c.fillRect(17,-6,5,11);
     } else if(tier===3){
       // T3: MOAB shredder — wide cannon + orange glow
       c.fillStyle='#1f2937';c.fillRect(-12,0,24,12);
       c.fillStyle='#374151';c.beginPath();c.arc(0,0,12,Math.PI,0);c.fill();
       c.fillStyle='#92400e';c.fillRect(-15,3,5,7);c.fillRect(10,3,5,7);
-      c.rotate(t.lastAngle||0);
       c.fillStyle='#292524';c.fillRect(2,-6,20,12);
       c.fillStyle='#78350f';c.fillRect(20,-7,7,14);
       if(cf>0){c.globalAlpha=cf*0.9;c.shadowColor='#f97316';c.shadowBlur=10;
@@ -825,7 +839,6 @@ function drawTower(c,t,sel){
       c.shadowColor='#ef4444';c.shadowBlur=12+pulse*6;
       c.strokeStyle='#ef4444';c.lineWidth=2;c.beginPath();c.arc(0,0,13,0,Math.PI*2);c.stroke();
       c.shadowBlur=0;
-      c.rotate(t.lastAngle||0);
       c.fillStyle='#450a0a';c.fillRect(2,-8,24,16);
       c.fillStyle='#dc2626';c.fillRect(24,-8,8,16);
     } else {
@@ -843,13 +856,28 @@ function drawTower(c,t,sel){
       c.shadowColor='#ef4444';c.shadowBlur=18+pulse*10;
       c.strokeStyle='#ef4444';c.lineWidth=3;c.beginPath();c.arc(0,0,14,0,Math.PI*2);c.stroke();
       c.shadowBlur=0;
-      c.restore();c.save();c.translate(x,y);c.rotate(t.lastAngle||0);
+      c.restore();c.save();c.translate(x,y);c.translate(-Math.cos(cangle)*recoilPx,-Math.sin(cangle)*recoilPx);c.rotate(cangle);
       c.shadowColor='#ef4444';c.shadowBlur=10;
       c.fillStyle='#7f1d1d';c.fillRect(2,-9,26,18);
       c.fillStyle='#fca5a5';c.fillRect(26,-5,10,10);
       c.fillStyle='#450a0a';
       for(var nb=0;nb<3;nb++)c.fillRect(6+nb*6,-9,3,18);
       c.shadowBlur=0;
+    }
+    // Muzzle explosion — small burst when just fired (in cannon space: muzzle is +X)
+    var muzzleX=18+Math.min(tier,4)*3;
+    if(cf>0){
+      c.save();
+      c.translate(muzzleX,0);
+      var explG=c.createRadialGradient(0,0,0,0,0,8+tier*2);
+      explG.addColorStop(0,'rgba(255,220,150,'+cf*0.95+')');
+      explG.addColorStop(0.25,'rgba(251,191,36,'+cf*0.7+')');
+      explG.addColorStop(0.5,'rgba(249,115,22,'+cf*0.4+')');
+      explG.addColorStop(0.75,'rgba(239,68,68,'+cf*0.2+')');
+      explG.addColorStop(1,'rgba(0,0,0,0)');
+      c.fillStyle=explG;c.beginPath();c.arc(0,0,8+tier*2,0,Math.PI*2);c.fill();
+      c.shadowColor='#fbbf24';c.shadowBlur=12*cf;c.fillStyle='rgba(254,243,199,'+cf*0.5+')';c.beginPath();c.arc(0,0,4+tier,0,Math.PI*2);c.fill();c.shadowBlur=0;
+      c.restore();
     }
     // Treads
     c.restore();c.save();c.translate(x,y);
