@@ -249,7 +249,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     <button style="margin-top:6px;background:none;border:none;color:#64748b;font-size:11px;cursor:pointer;" onclick="goHeroSelect()">&larr; Back</button>
   </div>
   <div class="overlay" id="goover"><h2 style="color:#ff3366;text-shadow:0 0 20px #ff336688;">SYSTEM FAILURE</h2><p id="gotext"></p><button class="obtn" onclick="goMenu()">Main Menu</button></div>
-  <div class="overlay" id="winover"><h2 style="color:#00e5ff;text-shadow:0 0 20px #00e5ff88;">GRID SECURED</h2><p id="wintext"></p><button class="obtn" onclick="goMenu()">Main Menu</button></div>
+  <div class="overlay" id="winover"><h2 style="color:#00e5ff;text-shadow:0 0 20px #00e5ff88;">GRID SECURED</h2><p id="wintext"></p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button class="obtn" onclick="showReviewMap()" style="background:linear-gradient(180deg,#003344,#001828);border:1px solid #00e5ff;">Review Map</button><button class="obtn" onclick="goMenu()">Main Menu</button></div></div>
 </div>
 <div id="panel">
   <div id="shop">
@@ -452,6 +452,7 @@ var TWAVES=10,gameMode='normal',paused=false,autoPlay=false;
 var selectedHeroKey=null,pendingHeroKey=null;
 var heroUnit=null,heroCooldownLeft=0,heroAbilityReady=false,fortifyActive=false;
 var $m=200,$l=100,$w=0,$s=1;
+var gameTotalDmg=0;
 var running=false,over=false,won=false,cleared=false;
 var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[];
 var selType=null,selObj=null,prevSnap=null;
@@ -549,12 +550,14 @@ function hitBloon(b,p){
     if(p.dmg>0){
       var prev=b.hp;b.hp-=p.dmg;
       var actual=prev-Math.max(0,b.hp);
+      gameTotalDmg+=actual;
       if(p.srcT)p.srcT.totalDmg=(p.srcT.totalDmg||0)+actual;
       if(b.hp<=0){$m+=b.rew;document.getElementById('mdisp').textContent=$m;splParts(b.x,b.y,b.col,b.moab?20:7);updShop();b.dead=true;if(p.srcT)p.srcT.pops=(p.srcT.pops||0)+1;}
     }
   } else {
     var prev=b.hp;b.hp-=p.dmg;
     var actual=prev-Math.max(0,b.hp);
+    gameTotalDmg+=actual;
     if(p.srcT)p.srcT.totalDmg=(p.srcT.totalDmg||0)+actual;
     if(p.burn)b.burn=Math.max(b.burn,3);
     if(b.hp<=0){
@@ -603,7 +606,7 @@ function update(dt){
 
   for(var i=0;i<bloons.length;i++){
     var b=bloons[i];if(b.dead)continue;
-    if(b.burn>0){b.burn-=dt*sm;b.hp-=Math.max(0.8,b.mhp*0.04)*dt*sm;if(b.hp<=0){$m+=b.rew;document.getElementById('mdisp').textContent=$m;splParts(b.x,b.y,'#fb923c',8);updShop();b.dead=true;continue;}}
+    if(b.burn>0){var burnDmg=Math.max(0.8,b.mhp*0.04)*dt*sm;b.burn-=dt*sm;b.hp-=burnDmg;gameTotalDmg+=burnDmg;if(b.hp<=0){$m+=b.rew;document.getElementById('mdisp').textContent=$m;splParts(b.x,b.y,'#fb923c',8);updShop();b.dead=true;continue;}}
     var spd=b.spd;
     if(b.permafrost)spd*=.5;else if(b.frz>0){b.frz-=dt*sm;spd*=.12;}
     b.dist+=spd*55*dt*sm;
@@ -749,15 +752,22 @@ function update(dt){
   if(selObj)liveUpdateInfo(selObj);
 }
 
+function showReviewMap(){
+  document.getElementById('winover').style.display='none';
+  var heroStr=heroUnit?(' | Hero: '+HEROES[heroUnit.heroKey].name):'';
+  setMsg('Victory summary — Final: $'+$m+' | \u2665 '+$l+' | Damage: '+Math.round(gameTotalDmg).toLocaleString()+' | Towers: '+towers.length+' | Banks: '+farms.length+heroStr+' — Click HOME when done.');
+}
+
 function endGame(w){
+  var dmgStr=' Total damage dealt: '+Math.round(gameTotalDmg).toLocaleString();
   if(w){
     won=true;
-    var winMsg=gameMode==='boss-hard'?'All 80 waves defeated! The Leviathan falls!':gameMode==='boss-easy'?'All 40 waves defeated! The bosses are slain!':'All 10 waves defeated!';
+    var winMsg=(gameMode==='boss-hard'?'All 80 waves defeated! The Leviathan falls!':gameMode==='boss-easy'?'All 40 waves defeated! The bosses are slain!':'All 10 waves defeated!')+dmgStr;
     document.getElementById('wintext').textContent=winMsg;
     document.getElementById('winover').style.display='flex';
   } else {
     over=true;
-    document.getElementById('gotext').textContent='Survived to wave '+$w+(gameMode==='boss'?' (Boss Mode)':'');
+    document.getElementById('gotext').textContent='Survived to wave '+$w+(gameMode==='boss'?' (Boss Mode)':'')+'.'+dmgStr;
     document.getElementById('goover').style.display='flex';
   }
   document.getElementById('bossbar').style.display='none';
@@ -2479,7 +2489,7 @@ function goMenu(){
 }
 
 function resetGame(){
-  $m=200;$l=100;$w=0;$s=1;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
+  $m=200;$l=100;$w=0;$s=1;gameTotalDmg=0;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
   towers=[];farms=[];bloons=[];projs=[];parts=[];floaties=[];
   selType=null;selObj=null;prevSnap=null;spawnQ=[];spawnT=0;
   activeBoss=null;heroUnit=null;heroAbilityReady=false;heroCooldownLeft=0;fortifyActive=false;
@@ -2521,7 +2531,7 @@ function buildSaveState(){
     ts:Date.now(),
     gameMode:gameMode,
     TWAVES:TWAVES,
-    m:$m,l:$l,w:$w,s:$s,
+    m:$m,l:$l,w:$w,s:$s,gameTotalDmg:gameTotalDmg,
     running:running,over:over,won:won,cleared:cleared,
     towers:towers.map(function(t){return{x:t.x,y:t.y,type:t.type,upA:t.upA,upB:t.upB,lf:0,pops:t.pops,totalDmg:t.totalDmg,shots:t.shots,lastAngle:t.lastAngle||0};}),
     farms:farms.map(function(f){return{x:f.x,y:f.y,up:f.up,wavesGrown:f.wavesGrown,totalEarned:f.totalEarned,farmTimer:0};}),
@@ -2551,7 +2561,7 @@ function loadGame(slot){
 
     // Restore game state
     gameMode=s.gameMode;TWAVES=s.TWAVES;
-    $m=s.m;$l=s.l;$w=s.w;$s=s.s;
+    $m=s.m;$l=s.l;$w=s.w;$s=s.s;gameTotalDmg=s.gameTotalDmg||0;
     running=s.running;over=s.over;won=s.won;cleared=s.cleared;
     paused=false;
     towers=s.towers;farms=s.farms;
