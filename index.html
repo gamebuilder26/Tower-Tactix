@@ -469,7 +469,7 @@ function genWave(w){
   var isHard=gameMode==='boss-hard';
   var isBossWave=isBossMode&&(w%10===0);
   if(isBossWave){
-    var tier=Math.max(0,Math.min(Math.floor(w/10)-1,BOSS_TIERS.length-1));
+    var tier=Math.min(Math.floor(w/10)-1,BOSS_TIERS.length-1);
     // Boss waves: minion count scales slowly, tier cap also slow
     var mx=Math.min(Math.floor(w*0.30),10);
     var n=isHard?Math.min(4+Math.floor(w/2),35):Math.min(6+w,40);
@@ -1680,6 +1680,7 @@ function draw(){
   // ── Enemy creatures ──
   for(var blo=0;blo<bloons.length;blo++){
     var b3=bloons[blo];
+    try{
     var fz2=b3.frz>0||b3.permafrost,bn=b3.burn>0;
     var bob=Math.sin(now*3+b3.id*1.3)*1.5;
     var bx=b3.x,by=b3.y+bob;
@@ -1968,6 +1969,7 @@ function draw(){
       cx.strokeStyle='rgba(255,255,255,0.15)';cx.lineWidth=1;cx.strokeRect(bxh,byh,bwh,5);
     }
     cx.restore();
+    }catch(e){cx.restore();console.warn('Draw enemy error:',e.message);}
   }
 
   // ── Projectiles ──
@@ -2656,8 +2658,9 @@ function loop(ts){
     if(!paused){var dt=Math.min((ts-lt)/1000,.05);lt=ts;update(dt);}else{lt=ts;}
     draw();
   }catch(e){
-    console.error('CRASH wave=',$w,'err=',e.message,e.stack);
-    setMsg('ERR W'+$w+': '+e.message.slice(0,60));
+    console.error('CRASH wave=',$w,'err=',e.message,'\nSTACK:',e.stack);
+    var errLine=e.stack?e.stack.split('\n').slice(0,3).join(' | '):'';
+    setMsg('ERR W'+$w+': '+e.message+' || '+errLine);
     paused=true;
   }
   requestAnimationFrame(loop);
