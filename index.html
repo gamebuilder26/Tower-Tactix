@@ -225,7 +225,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     </div>
   </div>
   <div class="overlay" id="landover">
-    <h2 style="color:#00e5ff;font-size:16px;font-family:Orbitron,sans-serif;letter-spacing:2px;">SELECT PROTOCOL <span id="heronamebadge" style="display:none;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;background:#1e3a5f;color:#93c5fd;vertical-align:middle;"></span></h2>
+    <h2 style="color:#00e5ff;font-size:16px;font-family:Orbitron,sans-serif;letter-spacing:2px;">Choose Game Mode <span id="heronamebadge" style="display:none;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;background:#1e3a5f;color:#93c5fd;vertical-align:middle;"></span></h2>
     <div class="mode-cards">
       <div class="mode-card normal" onclick="startGame('normal')">
         <div class="mode-icon">&#127919;</div>
@@ -469,7 +469,7 @@ function genWave(w){
   var isHard=gameMode==='boss-hard';
   var isBossWave=isBossMode&&(w%10===0);
   if(isBossWave){
-    var tier=Math.min(Math.floor(w/10)-1,BOSS_TIERS.length-1);
+    var tier=Math.max(0,Math.min(Math.floor(w/10)-1,BOSS_TIERS.length-1));
     // Boss waves: minion count scales slowly, tier cap also slow
     var mx=Math.min(Math.floor(w*0.30),10);
     var n=isHard?Math.min(4+Math.floor(w/2),35):Math.min(6+w,40);
@@ -505,14 +505,14 @@ function pathPos(dist){
 function spawnBloon(ti){
   var d,isBoss=false;
   if(typeof ti==='string'&&ti.indexOf('boss:')===0){
-    var bIdx=parseInt(ti.split(':')[1]);
-    if(bIdx<0||bIdx>=BOSS_TIERS.length){return;}
-    d=BOSS_TIERS[bIdx];isBoss=true;
+    var tierNum=parseInt(ti.split(':')[1],10);
+    if(isNaN(tierNum)||tierNum<0||tierNum>=BOSS_TIERS.length)tierNum=0;
+    d=BOSS_TIERS[tierNum];isBoss=true;
   } else {
-    if(ti<0||ti>=BT.length){return;}
-    d=BT[ti];
+    var idx=typeof ti==='number'?Math.max(0,Math.min(Math.floor(ti),BT.length-1)):0;
+    d=BT[idx];
   }
-  if(!d){return;}
+  if(!d)return;
   var _hp=d.hp,_spd=d.spd*(.95+Math.random()*.1);
   if(gameMode==='boss-hard'){
     // Softer curve: sqrt scaling after wave 20 to avoid exponential blowup
@@ -2405,11 +2405,11 @@ function startWave(){
   var isBossMode=gameMode==='boss-easy'||gameMode==='boss-hard';
   var isBossWave=isBossMode&&($w%10===0);
   if(isBossWave){
-    var tier=Math.min(Math.floor($w/10)-1,BOSS_TIERS.length-1);
+    var tier=Math.max(0,Math.min(Math.floor($w/10)-1,BOSS_TIERS.length-1));
     setMsg('💀 BOSS WAVE '+$w+' — '+BOSS_TIERS[tier].name+' incoming!');sb.style.background='#7f1d1d';
   } else {
     var waveNames=['','','','','','','','','','','Shadow horde','Demon swarm','Hellflood','Dread march','Abyssal tide','Infernal rush','Phantom siege','Void assault','Chaos wave','Nether storm'];
-    var wn=waveNames[$w]||BT[Math.min($w-1,BT.length-1)].name+' horde';
+    var wn=waveNames[$w]||(BT[Math.max(0,Math.min($w-1,BT.length-1))].name+' horde');
     setMsg('Wave '+$w+' — '+wn+'!');sb.style.background='';
   }
 }
