@@ -1,6 +1,6 @@
 # Tower Tactix
 
-A browser-based tower defense game inspired by Bloons TD 6. Defend the path from waves of demons and bosses using towers, heroes, and banks.
+A browser-based tower defense game. Defend the path from waves of demons and bosses using towers, heroes, and banks.
 
 ## How to play
 
