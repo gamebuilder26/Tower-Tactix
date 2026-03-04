@@ -616,7 +616,7 @@ function endGame(w){
     document.getElementById('winover').style.display='flex';
   } else {
     over=true;
-    document.getElementById('gotext').textContent='Survived to wave '+$w+(gameMode==='boss'?' (Boss Mode)':'');
+    document.getElementById('gotext').textContent='Survived to wave '+$w+((gameMode==='boss-easy'||gameMode==='boss-hard')?' (Boss Mode)':'');
     document.getElementById('goover').style.display='flex';
   }
   document.getElementById('bossbar').style.display='none';
@@ -1976,7 +1976,7 @@ function cancelSel(){
 }
 
 function updShop(){
-  var costs={dart:80,cannon:200,freeze:150,sniper:300,laser:350,farm:150};
+  var costs={dart:TD.dart.cost,cannon:TD.cannon.cost,freeze:TD.freeze.cost,sniper:TD.sniper.cost,laser:TD.laser.cost,farm:FARM_DEF.cost};
   var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',farm:'bfarm'};
   for(var k in ids){var b=document.getElementById(ids[k]);if(b)b.classList.toggle('cant',$m<costs[k]);}
   var hbtn=document.getElementById('bhero');
