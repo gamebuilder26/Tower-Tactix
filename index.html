@@ -399,26 +399,26 @@ var BT=[
   {col:'#f59e0b',hp:8,    spd:1.0,  rew:5,   sz:17,name:'Specter',    leak:5},
   {col:'#a855f7',hp:14,   spd:.95,  rew:8,   sz:17,name:'Wraith',     leak:8},
   {col:'#ec4899',hp:28,   spd:.90,  rew:12,  sz:19,name:'Banshee',    leak:12},
-  {col:'#06b6d4',hp:55,   spd:.85,  rew:18,  sz:21,name:'Phantom',    leak:18},
-  {col:'#f43f5e',hp:110,  spd:.80,  rew:25,  sz:22,name:'Hellknight', leak:25},
-  {col:'#334155',hp:240,  spd:.75,  rew:40,  sz:24,name:'Dreadlord',  leak:40},
-  {col:'#fbbf24',hp:500,  spd:.70,  rew:80,  sz:29,moab:true,name:'Archfiend',leak:60},
-  {col:'#7c3aed',hp:1200, spd:.82,  rew:200, sz:25,name:'Voidwalker', leak:50},
-  {col:'#0ea5e9',hp:2800, spd:.85,  rew:350, sz:26,name:'Riftborn',   leak:65},
-  {col:'#f43f5e',hp:6500, spd:.88,  rew:600, sz:27,name:'Abyssal',    leak:80},
-  {col:'#dc2626',hp:15000,spd:.80,  rew:1000,sz:28,name:'Oblivion',   leak:90},
-  {col:'#0f172a',hp:35000,spd:.75,  rew:2000,sz:30,name:'Void Lord',  leak:100}
+  {col:'#06b6d4',hp:55,   spd:.85,  rew:18,  sz:21,name:'Phantom',    leak:12},
+  {col:'#f43f5e',hp:110,  spd:.80,  rew:25,  sz:22,name:'Hellknight', leak:16},
+  {col:'#334155',hp:240,  spd:.75,  rew:40,  sz:24,name:'Dreadlord',  leak:22},
+  {col:'#fbbf24',hp:500,  spd:.70,  rew:80,  sz:29,moab:true,name:'Archfiend',leak:30},
+  {col:'#7c3aed',hp:600,  spd:.82,  rew:200, sz:25,name:'Voidwalker', leak:28},
+  {col:'#0ea5e9',hp:1400, spd:.85,  rew:350, sz:26,name:'Riftborn',   leak:35},
+  {col:'#f43f5e',hp:2800, spd:.88,  rew:600, sz:27,name:'Abyssal',    leak:40},
+  {col:'#dc2626',hp:5500, spd:.80,  rew:1000,sz:28,name:'Oblivion',   leak:50},
+  {col:'#0f172a',hp:12000,spd:.75,  rew:2000,sz:30,name:'Void Lord',  leak:60}
 ];
 
 var BOSS_TIERS=[
   {col:'#fbbf24',hp:1200,   spd:.52,rew:400,  sz:34,moab:true,boss:true,name:'MOAB',      tier:0,leak:40},
-  {col:'#f97316',hp:4000,   spd:.48,rew:800,  sz:38,moab:true,boss:true,name:'BFB',       tier:1,leak:70},
-  {col:'#dc2626',hp:12000,  spd:.45,rew:2000, sz:44,moab:true,boss:true,name:'ZOMG',      tier:2,leak:100},
+  {col:'#f97316',hp:3200,   spd:.48,rew:800,  sz:38,moab:true,boss:true,name:'BFB',       tier:1,leak:50},
+  {col:'#dc2626',hp:10000,  spd:.45,rew:2000, sz:44,moab:true,boss:true,name:'ZOMG',      tier:2,leak:80},
   {col:'#7c3aed',hp:35000,  spd:.42,rew:4000, sz:48,moab:true,boss:true,name:'DDT',       tier:3,leak:100},
-  {col:'#0e7490',hp:100000, spd:.40,rew:8000, sz:52,moab:true,boss:true,name:'BAD',       tier:4,leak:100},
-  {col:'#be185d',hp:280000, spd:.38,rew:15000,sz:56,moab:true,boss:true,name:'ULTRA',     tier:5,leak:100},
-  {col:'#064e3b',hp:750000, spd:.36,rew:25000,sz:62,moab:true,boss:true,name:'TITAN',     tier:6,leak:100},
-  {col:'#1e1b4b',hp:2000000,spd:.34,rew:50000,sz:70,moab:true,boss:true,name:'LEVIATHAN', tier:7,leak:100}
+  {col:'#0e7490',hp:55000,  spd:.40,rew:8000, sz:52,moab:true,boss:true,name:'BAD',       tier:4,leak:100},
+  {col:'#be185d',hp:130000, spd:.38,rew:15000,sz:56,moab:true,boss:true,name:'ULTRA',     tier:5,leak:100},
+  {col:'#064e3b',hp:300000, spd:.36,rew:25000,sz:62,moab:true,boss:true,name:'TITAN',     tier:6,leak:100},
+  {col:'#1e1b4b',hp:700000, spd:.34,rew:50000,sz:70,moab:true,boss:true,name:'LEVIATHAN', tier:7,leak:100}
 ];
 
 var HEROES={
@@ -451,7 +451,7 @@ var HEROES={
 var TWAVES=10,gameMode='normal',paused=false,autoPlay=false;
 var selectedHeroKey=null,pendingHeroKey=null;
 var heroUnit=null,heroCooldownLeft=0,heroAbilityReady=false,fortifyActive=false;
-var $m=200,$l=100,$w=0,$s=1;
+var $m=600,$l=100,$w=0,$s=1;
 var running=false,over=false,won=false,cleared=false;
 var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[];
 var selType=null,selObj=null,prevSnap=null;
@@ -466,14 +466,22 @@ function farmIncome(f){
 function genWave(w){
   var q=[];
   var isBossMode=gameMode==='boss-easy'||gameMode==='boss-hard';
+  var isHard=gameMode==='boss-hard';
   var isBossWave=isBossMode&&(w%10===0);
   if(isBossWave){
     var tier=Math.min(Math.floor(w/10)-1,BOSS_TIERS.length-1);
-    var mx=Math.min(Math.floor(w*0.45),13),n=Math.min(8+w*2,70);
+    // Boss waves: minion count scales slowly, tier cap also slow
+    var mx=Math.min(Math.floor(w*0.30),10);
+    var n=isHard?Math.min(4+Math.floor(w/2),35):Math.min(6+w,40);
     for(var i=0;i<n;i++)q.push(Math.min(Math.floor(Math.random()*(mx+1)),mx));
     q.push('boss:'+tier);
   } else {
-    var mx2=Math.min(Math.floor(w*0.3),12),n2=Math.min(12+w*5,120);
+    // Regular waves:
+    // - enemy count: slower growth, lower hard cap
+    // - tier: much slower unlock so early waves stay manageable
+    var mx2=isHard?Math.min(Math.floor(w*0.22),11):Math.min(Math.floor(w*0.3),12);
+    var capN=isHard?55:120;
+    var n2=isHard?Math.min(4+w*2,capN):Math.min(5+w*2,capN);
     for(var i=0;i<n2;i++)q.push(Math.min(Math.floor(Math.random()*(mx2+1)),mx2));
   }
   return q;
@@ -506,7 +514,12 @@ function spawnBloon(ti){
   }
   if(!d){return;}
   var _hp=d.hp,_spd=d.spd*(.95+Math.random()*.1);
-  if(gameMode==='boss-hard'&&!isBoss){var _wm=1+$w*0.04;_hp=Math.ceil(_hp*_wm);_spd=Math.min(_spd*(1+$w*0.012),2.8);}
+  if(gameMode==='boss-hard'){
+    // Softer curve: sqrt scaling after wave 20 to avoid exponential blowup
+    var _wm=isBoss?(1+$w*0.003):(1+Math.min($w,20)*0.008+Math.max(0,$w-20)*0.003);
+    _hp=Math.ceil(_hp*_wm);
+    if(!isBoss)_spd=Math.min(_spd*(1+$w*0.005),2.2);
+  }
   var b={id:bid++,dist:-30,hp:_hp,mhp:_hp,spd:_spd,
     x:PP[0].x,y:PP[0].y,col:d.col,sz:d.sz,frz:0,rew:d.rew,leak:d.leak||1,
     moab:!!d.moab,boss:!!isBoss,bossName:isBoss?d.name:'',
@@ -559,8 +572,8 @@ function getTowerStats(t){
   var freezeAmt=1.8,permafrost=false,infiniteRange=false,burnMode=false,chainCount=0,clusterCount=0,nukeMode=false;
   var pa=t.upA,pb=t.upB;
   if(t.type==='dart'){
-    if(pa>=1)rate*=1.4;if(pa>=2)rate*=1.6;if(pa>=3)rate*=3;if(pa>=4)rate*=2;if(pa>=5)rate*=2;
-    if(pb>=1)dmg*=2;if(pb>=2)dmg*=3;if(pb>=3)chainCount=3;if(pb>=4){dmg*=4;chainCount=5;}if(pb>=5){dmg*=6;chainCount=6;}
+    if(pa>=1)rate*=1.4;if(pa>=2)rate*=1.6;if(pa>=3)rate*=3;if(pa>=4)rate*=2;if(pa>=5)rate*=2.5;
+    if(pb>=1)dmg*=2;if(pb>=2)dmg*=3;if(pb>=3)chainCount=3;if(pb>=4){dmg*=4;chainCount=5;}if(pb>=5){dmg*=8;chainCount=8;}
   }
   if(t.type==='cannon'){
     if(pa>=1)splash*=1.5;if(pa>=2)splash*=2;if(pa>=3){splash*=3;nukeMode=true;}if(pa>=4)splash*=5;if(pa>=5){splash*=3;nukeMode=true;burnMode=true;}
@@ -585,7 +598,7 @@ function getTowerStats(t){
 function update(dt){
   if(over||won)return;
   var sm=$s,now=performance.now()/1000;
-  var _spawnGap=gameMode==='boss-hard'?(.28+Math.random()*.18):(.45+Math.random()*.3);if(running){spawnT-=dt*sm;if(spawnT<=0&&spawnQ.length>0){spawnBloon(spawnQ.shift());spawnT=_spawnGap;}}
+  var _spawnGap=gameMode==='boss-hard'?(.38+Math.random()*.22):(.45+Math.random()*.3);if(running){spawnT-=dt*sm;if(spawnT<=0&&spawnQ.length>0){spawnBloon(spawnQ.shift());spawnT=_spawnGap;}}
   var pl=pathLen();
 
   for(var i=0;i<bloons.length;i++){
@@ -606,7 +619,7 @@ function update(dt){
       var pp=pathPos(b.dist);b.x=pp.x;b.y=pp.y;
     }
   }
-  bloons=bloons.filter(function(b){return !b.dead&&b.hp>0;});
+  bloons=bloons.filter(function(b){return !b.dead&&b.hp>0.001;});
 
   for(var ti=0;ti<towers.length;ti++){
     var t=towers[ti];if(!t.lf)t.lf=0;
@@ -724,7 +737,7 @@ function update(dt){
   if(running&&spawnQ.length===0&&bloons.length===0&&!cleared){
     cleared=true;running=false;fortifyActive=false;
     for(var fmi2=0;fmi2<farms.length;fmi2++)farms[fmi2].wavesGrown=Math.min((farms[fmi2].wavesGrown||0)+1,3);
-        var bonBase=gameMode==='boss-hard'?60:50;var bon=bonBase+$w*(gameMode==='boss-hard'?12:10);$m+=bon;document.getElementById('mdisp').textContent=$m;
+        var bonBase=gameMode==='boss-hard'?200:100;var bonMult=gameMode==='boss-hard'?55:22;var bonExtra=gameMode==='boss-hard'?Math.floor($w/5)*120:Math.floor($w/5)*30;var bon=bonBase+$w*bonMult+bonExtra;$m+=bon;document.getElementById('mdisp').textContent=$m;
     var sb=document.getElementById('startbtn');
     sb.textContent=$w>=TWAVES?'COMPLETE!':'▶ NEXT WAVE';
     sb.classList.remove('on');sb.style.background='';
@@ -1183,7 +1196,7 @@ function drawHero(c,h,sel){
 }
 
 function draw(){
-  var W=cv.width,H=cv.height,now=performance.now()/1000;
+  var W=cv.width,H=cv.height,now=performance.now()/1000,spin=now*1.2;
   cx.clearRect(0,0,W,H);
 
   // ── TRON GRID BATTLEFIELD ──────────────────────────────────────────────────
@@ -1667,6 +1680,7 @@ function draw(){
   // ── Enemy creatures ──
   for(var blo=0;blo<bloons.length;blo++){
     var b3=bloons[blo];
+    try{
     var fz2=b3.frz>0||b3.permafrost,bn=b3.burn>0;
     var bob=Math.sin(now*3+b3.id*1.3)*1.5;
     var bx=b3.x,by=b3.y+bob;
@@ -1955,6 +1969,7 @@ function draw(){
       cx.strokeStyle='rgba(255,255,255,0.15)';cx.lineWidth=1;cx.strokeRect(bxh,byh,bwh,5);
     }
     cx.restore();
+    }catch(e){cx.restore();console.warn('Draw enemy error:',e.message);}
   }
 
   // ── Projectiles ──
@@ -2466,7 +2481,7 @@ function goMenu(){
 }
 
 function resetGame(){
-  $m=200;$l=100;$w=0;$s=1;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
+  $m=(gameMode==='boss-hard'?1000:gameMode==='boss-easy'?800:600);$l=(gameMode==='boss-hard'?150:gameMode==='boss-easy'?120:100);$w=0;$s=1;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
   towers=[];farms=[];bloons=[];projs=[];parts=[];floaties=[];
   selType=null;selObj=null;prevSnap=null;spawnQ=[];spawnT=0;
   activeBoss=null;heroUnit=null;heroAbilityReady=false;heroCooldownLeft=0;fortifyActive=false;
@@ -2643,8 +2658,9 @@ function loop(ts){
     if(!paused){var dt=Math.min((ts-lt)/1000,.05);lt=ts;update(dt);}else{lt=ts;}
     draw();
   }catch(e){
-    console.error('CRASH wave=',$w,'err=',e.message,e.stack);
-    setMsg('ERR W'+$w+': '+e.message.slice(0,60));
+    console.error('CRASH wave=',$w,'err=',e.message,'\nSTACK:',e.stack);
+    var errLine=e.stack?e.stack.split('\n').slice(0,3).join(' | '):'';
+    setMsg('ERR W'+$w+': '+e.message+' || '+errLine);
     paused=true;
   }
   requestAnimationFrame(loop);
