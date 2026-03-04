@@ -258,7 +258,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     <button class="tbtn" id="bf" onclick="selT('freeze')"><span class="ticon">&#10053;</span><br>CRYO<span class="tc"><br>&#9670;<span id="cost-freeze"></span></span></button>
     <button class="tbtn" id="bsn" onclick="selT('sniper')"><span class="ticon">&#9144;</span><br>RAIL<span class="tc"><br>&#9670;<span id="cost-sniper"></span></span></button>
     <button class="tbtn" id="bl" onclick="selT('laser')"><span class="ticon">&#11088;</span><br>LASER<span class="tc"><br>&#9670;<span id="cost-laser"></span></span></button>
-    <button class="tbtn" id="bfarm" onclick="selT('farm')"><span class="ticon">&#9651;</span><br>NODE<span class="tc"><br>&#9670;<span id="cost-farm"></span></span><span class="farm-tag">+CR/WAVE</span></button>
+    <button class="tbtn" id="bfarm" onclick="selT('farm')"><span class="ticon">&#9651;</span><br>Bank<span class="tc"><br>&#9670;<span id="cost-farm"></span></span><span class="farm-tag">+CR/WAVE</span></button>
     <button class="tbtn" id="bhero" onclick="selT('hero')" style="display:none;border-color:#00e5ff;background:linear-gradient(160deg,#001428,#000d1a);"><span id="heroshopicon" class="ticon">&#9874;</span><br><span id="heroshopname" style="font-family:Orbitron,sans-serif;font-size:8px;letter-spacing:.5px;">HERO</span><span class="tc"><br><span id="heroshopcost">-</span></span></button>
   </div>
   <div style="display:flex;align-items:center;gap:6px;">
@@ -451,7 +451,7 @@ var HEROES={
 var TWAVES=10,gameMode='normal',paused=false,autoPlay=false;
 var selectedHeroKey=null,pendingHeroKey=null;
 var heroUnit=null,heroCooldownLeft=0,heroAbilityReady=false,fortifyActive=false;
-var $m=600,$l=100,$w=0,$s=1;
+var $m=200,$l=100,$w=0,$s=1;
 var running=false,over=false,won=false,cleared=false;
 var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[];
 var selType=null,selObj=null,prevSnap=null;
@@ -2479,7 +2479,7 @@ function goMenu(){
 }
 
 function resetGame(){
-  $m=(gameMode==='boss-hard'?1000:gameMode==='boss-easy'?800:600);$l=(gameMode==='boss-hard'?150:gameMode==='boss-easy'?120:100);$w=0;$s=1;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
+  $m=200;$l=100;$w=0;$s=1;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
   towers=[];farms=[];bloons=[];projs=[];parts=[];floaties=[];
   selType=null;selObj=null;prevSnap=null;spawnQ=[];spawnT=0;
   activeBoss=null;heroUnit=null;heroAbilityReady=false;heroCooldownLeft=0;fortifyActive=false;
