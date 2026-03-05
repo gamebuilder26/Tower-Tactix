@@ -271,6 +271,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     <button class="cbtn" id="autobtn" onclick="toggleAuto()">&#9654;&#9654; AUTO</button>
     <button class="cbtn" id="spdbtn" onclick="toggleSpd()">&#9889; 1X</button>
     <button class="cbtn" id="pausebtn" onclick="togglePause()">&#9646;&#9646; PAUSE</button>
+    <button class="cbtn" id="restartbtn" onclick="restartFromPause()" style="display:none;border-color:#ff6b6b;color:#ff6b6b;">&#8634; RESTART</button>
     <button class="cbtn" id="abilitybtn" onclick="useAbility()">&#9874; ABILITY</button>
     <button class="cbtn" id="savebtn" onclick="toggleSavePanel()">&#9632; SAVE</button>
     <button class="cbtn" id="sellbtn" onclick="sellSel()">&#9670; SELL</button>
@@ -485,8 +486,8 @@ function genWave(w){
     // Regular waves: normal mode waves 1–8 are denser and slightly tougher types so early game is neck-and-neck
     var mx2=isHard?Math.min(Math.floor(w*0.26),11):Math.min(Math.floor(w*0.38),13);
     var capN=isHard?65:100;
-    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w<=8?Math.min(12+Math.floor(w*3),capN):Math.min(8+Math.floor(w*3.2),capN));
-    if(!isHard&&w<=8)mx2=Math.min(Math.floor(w*0.42),10);
+    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w<=8?Math.min(10+Math.floor(w*2.6),capN):Math.min(8+Math.floor(w*3.2),capN));
+    if(!isHard&&w<=8)mx2=Math.min(Math.floor(w*0.38),10);
     for(var i=0;i<n2;i++)q.push(Math.min(Math.floor(Math.random()*(mx2+1)),mx2));
   }
   return q;
@@ -530,11 +531,11 @@ function spawnBloon(ti){
   } else if(gameMode==='normal'&&!isBoss){
     var _wm=1+$w*0.07;_hp=Math.ceil(_hp*_wm);
     _spd=Math.min(_spd*(1+$w*0.012),1.45);
-    // Waves 1–8: extra pressure so spending-as-you-go barely holds the line
-    if($w<=8)_hp=Math.ceil(_hp*1.12);
+    // Waves 1–8: light pressure so zero damage is possible with good play; goal is to scramble for a bank and get ahead by ~round 9
+    if($w<=8)_hp=Math.ceil(_hp*1.04);
   }
-  // Early BANK greed: placing a bank before wave 5 ends = stronger foes
-  if(farms.length>=1&&$w<=5){
+  // Early BANK greed: banks on field through wave 8 = stronger foes (HP/speed only; life tax & placement penalty unchanged)
+  if(farms.length>=1&&$w<=8){
     _hp=Math.ceil(_hp*1.5);
     _spd=Math.min(_spd*1.25,2.5);
   }
@@ -757,13 +758,14 @@ function update(dt){
   if(running&&spawnQ.length===0&&bloons.length===0&&!cleared){
     cleared=true;running=false;fortifyActive=false;
     for(var fmi2=0;fmi2<farms.length;fmi2++)farms[fmi2].wavesGrown=Math.min((farms[fmi2].wavesGrown||0)+1,3);
-    // Early BANK: lose 15 lives every time a round ends (waves 1–3) while you have a bank.
-    if(farms.length>=1&&$w<=3){$l=Math.max(0,$l-15);document.getElementById('ldisp').textContent=$l;}
+    // Early BANK: if any bank was placed before wave 5 (not including 5), lose 15 lives at end of that round.
+    var hasEarlyBank=farms.some(function(f){return f.placedBeforeWave5;});
+    if(hasEarlyBank){$l=Math.max(0,$l-15);document.getElementById('ldisp').textContent=$l;}
     var bonBase=gameMode==='boss-hard'?200:100;var bonMult=gameMode==='boss-hard'?55:(gameMode==='normal'?19:22);var bonExtra=gameMode==='boss-hard'?Math.floor($w/5)*120:Math.floor($w/5)*30;var bon=bonBase+$w*bonMult+bonExtra;$m+=bon;document.getElementById('mdisp').textContent=$m;
     var sb=document.getElementById('startbtn');
     sb.textContent=$w>=TWAVES?'COMPLETE!':'▶ NEXT WAVE';
     sb.classList.remove('on');sb.style.background='';
-    setMsg('Wave '+$w+' cleared! +$'+bon+' bonus!'+(farms.length>=1&&$w<=3?' — Early bank tax: -\u266515':'')+' ');updShop();
+    setMsg('Wave '+$w+' cleared! +$'+bon+' bonus!'+(farms.some(function(f){return f.placedBeforeWave5;})?' — Early bank tax: -\u266515':'')+' ');updShop();
     if($w>=TWAVES){setTimeout(function(){endGame(true);},800);}
     else if(autoPlay){setTimeout(function(){if(!running&&!over&&!won&&!paused)startWave();},1200);}
   }
@@ -2127,14 +2129,9 @@ function tap(x,y){
     if(isFarm){
       var z=nearZone(x,y);if(!z){setMsg('Tap a highlighted zone!');return;}
       $m-=cost;document.getElementById('mdisp').textContent=$m;
-      farms.push({x:z.x,y:z.y,up:0,wavesGrown:0,totalEarned:0,farmTimer:0,totalSpent:FARM_DEF.cost});
+      farms.push({x:z.x,y:z.y,up:0,wavesGrown:0,totalEarned:0,farmTimer:0,totalSpent:FARM_DEF.cost,placedBeforeWave5:$w<=4});
       prevSnap=null;updShop();cancelSel();
-      if($w<=5){
-        var earlyPenalty=15;
-        $l=Math.max(0,$l-earlyPenalty);
-        document.getElementById('ldisp').textContent=$l;
-        setMsg('Greed draws stronger foes! -\u2665'+earlyPenalty);
-      } else setMsg('BANK placed!');
+      setMsg('BANK placed!');
     } else {
       var s2=nearSlot(x,y);if(!s2){setMsg('Tap a highlighted slot!');return;}
       $m-=cost;document.getElementById('mdisp').textContent=$m;
@@ -2466,14 +2463,24 @@ function toggleSpd(){$s=$s===1?5:$s===5?10:1;document.getElementById('spdbtn').t
 function togglePause(){
   paused=!paused;
   var btn=document.getElementById('pausebtn');
+  var rbtn=document.getElementById('restartbtn');
   if(paused){
     btn.textContent='▶ RESUME';btn.style.borderColor='#ffaa00';btn.style.color='#ffaa00';
-    setMsg('Paused — press Resume to continue');
+    if(rbtn)rbtn.style.display='inline-block';
+    setMsg('Paused — Resume or Restart');
   } else {
     btn.textContent='⏸ PAUSE';btn.style.borderColor='';btn.style.color='';
+    if(rbtn)rbtn.style.display='none';
     lt=performance.now(); // reset dt so no time-skip on resume
     setMsg('Resumed!');
   }
+}
+function restartFromPause(){
+  paused=false;
+  var rbtn=document.getElementById('restartbtn');if(rbtn)rbtn.style.display='none';
+  var pb=document.getElementById('pausebtn');pb.textContent='⏸ PAUSE';pb.style.borderColor='';pb.style.color='';
+  resetGame();
+  setMsg('Game restarted — tap DEPLOY to begin!');
 }
 function toggleAuto(){
   autoPlay=!autoPlay;
@@ -2525,6 +2532,7 @@ function buildHeroGrid(){
       card.classList.add('sel-hero');
       var btn=document.getElementById('heroconfirmbtn');
       btn.textContent='Play as '+h.name+' \u2192';btn.style.opacity='1';btn.style.pointerEvents='auto';
+      confirmHero(false); // auto-confirm: clicking operative selects and proceeds
     };
     grid.appendChild(card);
   });
@@ -2585,6 +2593,7 @@ function resetGame(){
   document.getElementById('spdbtn').textContent='⚡ 1X';
   var ab=document.getElementById('autobtn');if(ab){ab.classList.remove('on');ab.style.background='';ab.style.color='';ab.textContent='▶▶ AUTO';}
   var pb=document.getElementById('pausebtn');pb.textContent='⏸ PAUSE';pb.style.borderColor='';pb.style.color='';
+  var rbtn=document.getElementById('restartbtn');if(rbtn)rbtn.style.display='none';
   document.getElementById('abilitybtn').style.display='none';
   document.getElementById('info').style.display='none';document.getElementById('sellbtn').style.display='none';
   document.querySelectorAll('.tbtn').forEach(function(b){b.classList.remove('sel');});
@@ -2618,7 +2627,7 @@ function buildSaveState(){
     m:$m,l:$l,w:$w,s:$s,gameTotalDmg:gameTotalDmg,
     running:running,over:over,won:won,cleared:cleared,
     towers:towers.map(function(t){return{x:t.x,y:t.y,type:t.type,upA:t.upA,upB:t.upB,lf:0,pops:t.pops,totalDmg:t.totalDmg,shots:t.shots,lastAngle:t.lastAngle||0};}),
-    farms:farms.map(function(f){return{x:f.x,y:f.y,up:f.up,wavesGrown:f.wavesGrown,totalEarned:f.totalEarned,farmTimer:0};}),
+    farms:farms.map(function(f){return{x:f.x,y:f.y,up:f.up,wavesGrown:f.wavesGrown,totalEarned:f.totalEarned,farmTimer:0,placedBeforeWave5:!!f.placedBeforeWave5};}),
     heroUnit:heroUnit?{x:heroUnit.x,y:heroUnit.y,heroKey:heroUnit.heroKey,upA:heroUnit.upA,upB:heroUnit.upB,lf:0,pops:heroUnit.pops,totalDmg:heroUnit.totalDmg,shots:heroUnit.shots}:null,
     selectedHeroKey:selectedHeroKey,
     heroAbilityReady:heroAbilityReady,
