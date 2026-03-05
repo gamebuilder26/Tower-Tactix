@@ -391,9 +391,9 @@ var TD={
     pathB:{name:'Chain Beam',levels:['Chain 2','Chain 4','Chain 6','Cascade: chain 10 + dmg x2','Singularity: chain 20 x2 dmg'],costs:[170,210,300,4000,14000]}},
 };
 
-var FARM_DEF={cost:200,name:'BANK',baseIncome:22,
+var FARM_DEF={cost:500,name:'BANK',baseIncome:22,
   upgrades:['Savings Account +$15/wave','Investment Fund +$30/wave','Vault Max +$55/wave','Megabank +$100/wave','Hell Treasury +$200/wave'],
-  upgCosts:[120,180,300,2500,7000]};
+  upgCosts:[135,195,330,2650,7600]};
 
 // Base HP tuned so waves 1–8 feel neck-and-neck when spending cash as you get it
 var BT=[
@@ -486,7 +486,7 @@ function genWave(w){
     // Regular waves: normal mode waves 1–8 are denser and slightly tougher types so early game is neck-and-neck
     var mx2=isHard?Math.min(Math.floor(w*0.26),11):Math.min(Math.floor(w*0.38),13);
     var capN=isHard?65:100;
-    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w<=8?Math.min(10+Math.floor(w*2.6),capN):Math.min(8+Math.floor(w*3.2),capN));
+    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w===1?8:(w<=8?Math.min(10+Math.floor(w*2.6),capN):Math.min(8+Math.floor(w*3.2),capN)));
     if(!isHard&&w<=8)mx2=Math.min(Math.floor(w*0.38),10);
     for(var i=0;i<n2;i++)q.push(Math.min(Math.floor(Math.random()*(mx2+1)),mx2));
   }
@@ -758,14 +758,11 @@ function update(dt){
   if(running&&spawnQ.length===0&&bloons.length===0&&!cleared){
     cleared=true;running=false;fortifyActive=false;
     for(var fmi2=0;fmi2<farms.length;fmi2++)farms[fmi2].wavesGrown=Math.min((farms[fmi2].wavesGrown||0)+1,3);
-    // Early BANK: if any bank was placed before wave 5 (not including 5), lose 15 lives at end of that round.
-    var hasEarlyBank=farms.some(function(f){return f.placedBeforeWave5;});
-    if(hasEarlyBank){$l=Math.max(0,$l-15);document.getElementById('ldisp').textContent=$l;}
     var bonBase=gameMode==='boss-hard'?200:100;var bonMult=gameMode==='boss-hard'?55:(gameMode==='normal'?19:22);var bonExtra=gameMode==='boss-hard'?Math.floor($w/5)*120:Math.floor($w/5)*30;var bon=bonBase+$w*bonMult+bonExtra;$m+=bon;document.getElementById('mdisp').textContent=$m;
     var sb=document.getElementById('startbtn');
     sb.textContent=$w>=TWAVES?'COMPLETE!':'▶ NEXT WAVE';
     sb.classList.remove('on');sb.style.background='';
-    setMsg('Wave '+$w+' cleared! +$'+bon+' bonus!'+(farms.some(function(f){return f.placedBeforeWave5;})?' — Early bank tax: -\u266515':'')+' ');updShop();
+    setMsg('Wave '+$w+' cleared! +$'+bon+' bonus!');updShop();
     if($w>=TWAVES){setTimeout(function(){endGame(true);},800);}
     else if(autoPlay){setTimeout(function(){if(!running&&!over&&!won&&!paused)startWave();},1200);}
   }
@@ -2131,7 +2128,7 @@ function tap(x,y){
     if(isFarm){
       var z=nearZone(x,y);if(!z){setMsg('Tap a highlighted zone!');return;}
       $m-=cost;document.getElementById('mdisp').textContent=$m;
-      farms.push({x:z.x,y:z.y,up:0,wavesGrown:0,totalEarned:0,farmTimer:0,totalSpent:FARM_DEF.cost,placedBeforeWave5:$w<=4});
+      farms.push({x:z.x,y:z.y,up:0,wavesGrown:0,totalEarned:0,farmTimer:0,totalSpent:FARM_DEF.cost});
       prevSnap=null;updShop();cancelSel();
       setMsg('BANK placed!');
     } else {
@@ -2566,6 +2563,8 @@ function startGame(mode){
   document.getElementById('landover').style.display='none';
   document.getElementById('hdr').style.borderBottomColor=isBoss?'#7f1d1d':'#0f3460';
   resetGame();
+  autoPlay=true;
+  var ab=document.getElementById('autobtn');if(ab){ab.classList.add('on');ab.style.background='';ab.style.color='';ab.textContent='▶▶ AUTO: ON';}
 }
 
 function homeBtn(){
@@ -2629,7 +2628,7 @@ function buildSaveState(){
     m:$m,l:$l,w:$w,s:$s,gameTotalDmg:gameTotalDmg,
     running:running,over:over,won:won,cleared:cleared,
     towers:towers.map(function(t){return{x:t.x,y:t.y,type:t.type,upA:t.upA,upB:t.upB,lf:0,pops:t.pops,totalDmg:t.totalDmg,shots:t.shots,lastAngle:t.lastAngle||0};}),
-    farms:farms.map(function(f){return{x:f.x,y:f.y,up:f.up,wavesGrown:f.wavesGrown,totalEarned:f.totalEarned,farmTimer:0,placedBeforeWave5:!!f.placedBeforeWave5};}),
+    farms:farms.map(function(f){return{x:f.x,y:f.y,up:f.up,wavesGrown:f.wavesGrown,totalEarned:f.totalEarned,farmTimer:0};}),
     heroUnit:heroUnit?{x:heroUnit.x,y:heroUnit.y,heroKey:heroUnit.heroKey,upA:heroUnit.upA,upB:heroUnit.upB,lf:0,pops:heroUnit.pops,totalDmg:heroUnit.totalDmg,shots:heroUnit.shots}:null,
     selectedHeroKey:selectedHeroKey,
     heroAbilityReady:heroAbilityReady,
