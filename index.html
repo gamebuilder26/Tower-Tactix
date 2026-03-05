@@ -528,6 +528,11 @@ function spawnBloon(ti){
     var _wm=1+$w*0.07;_hp=Math.ceil(_hp*_wm);
     _spd=Math.min(_spd*(1+$w*0.012),1.45);
   }
+  // Early BANK greed: placing a bank before wave 5 ends = stronger foes
+  if(farms.length>=1&&$w<=5){
+    _hp=Math.ceil(_hp*1.5);
+    _spd=Math.min(_spd*1.25,2.5);
+  }
   var b={id:bid++,dist:-30,hp:_hp,mhp:_hp,spd:_spd,
     x:PP[0].x,y:PP[0].y,col:d.col,sz:d.sz,frz:0,rew:d.rew,leak:d.leak||1,
     moab:!!d.moab,boss:!!isBoss,bossName:isBoss?d.name:'',
@@ -2116,7 +2121,13 @@ function tap(x,y){
       var z=nearZone(x,y);if(!z){setMsg('Tap a highlighted zone!');return;}
       $m-=cost;document.getElementById('mdisp').textContent=$m;
       farms.push({x:z.x,y:z.y,up:0,wavesGrown:0,totalEarned:0,farmTimer:0,totalSpent:FARM_DEF.cost});
-      prevSnap=null;updShop();cancelSel();setMsg('BANK placed!');
+      prevSnap=null;updShop();cancelSel();
+      if($w<=5){
+        var earlyPenalty=15;
+        $l=Math.max(0,$l-earlyPenalty);
+        document.getElementById('ldisp').textContent=$l;
+        setMsg('Greed draws stronger foes! -\u2665'+earlyPenalty);
+      } else setMsg('BANK placed!');
     } else {
       var s2=nearSlot(x,y);if(!s2){setMsg('Tap a highlighted slot!');return;}
       $m-=cost;document.getElementById('mdisp').textContent=$m;
@@ -2155,7 +2166,10 @@ function showInfo(obj){
         :'<div style="color:#22c55e;margin-top:2px">Max Level!</div>'));
   } else {
     var d=TD[obj.type],st=getTowerStats(obj);
-    var canA=obj.upA<5&&obj.upB===0,canB=obj.upB<5&&obj.upA===0;
+    var ascBlockA=obj.upA===4&&otherTowerHasAscended(obj.type,'A',obj),ascBlockB=obj.upB===4&&otherTowerHasAscended(obj.type,'B',obj);
+    var canA=obj.upA<5&&obj.upB===0&&!ascBlockA,canB=obj.upB<5&&obj.upA===0&&!ascBlockB;
+    var lblA=ascBlockA?'Limit 1/route':(canA?'Upgrade $'+d.pathA.costs[obj.upA]:(obj.upB>0?'Path B active':'Max'));
+    var lblB=ascBlockB?'Limit 1/route':(canB?'Upgrade $'+d.pathB.costs[obj.upB]:(obj.upA>0?'Path A active':'Max'));
     el.innerHTML='<h3>'+d.name+' &mdash; A:'+obj.upA+' / B:'+obj.upB+'</h3>'
       +'<div>'+d.desc+' | Rng:'+Math.round(Math.min(st.range,400))+' Dmg:'+st.dmg.toFixed(1)+' Rate:'+st.rate.toFixed(1)+'/s</div>'
       +'<div class="statbar">'
@@ -2167,11 +2181,11 @@ function showInfo(obj){
       +(!readOnly?'<div class="upg-paths">'
       +'<div class="upg-path"><h4>&#127823; '+d.pathA.name+'</h4>'
       +[0,1,2,3,4].map(function(i){return'<div style="font-size:9px;color:'+(obj.upA>i?(i>=3?'#f5c842':'#86efac'):'#94a3b8')+'">'+(obj.upA>i?'&#10003;':'&#9675;')+' '+d.pathA.levels[i]+'</div>';}).join('')
-      +(obj.upA<5?'<button class="upg-btn patha" '+(!canA||$m<d.pathA.costs[obj.upA]?'disabled':'')+' onclick="upgPath(\'A\')">'+(canA?'Upgrade $'+d.pathA.costs[obj.upA]:(obj.upB>0?'Path B active':'Max'))+'</button>':'<div style="color:#f5c842;font-size:9px">&#9733; ASCENDED!</div>')
+      +(obj.upA<5?'<button class="upg-btn patha" '+(!canA||$m<d.pathA.costs[obj.upA]?'disabled':'')+' onclick="upgPath(\'A\')">'+lblA+'</button>':'<div style="color:#f5c842;font-size:9px">&#9733; ASCENDED!</div>')
       +'</div>'
       +'<div class="upg-path"><h4>&#127825; '+d.pathB.name+'</h4>'
       +[0,1,2,3,4].map(function(i){return'<div style="font-size:9px;color:'+(obj.upB>i?(i>=3?'#fb923c':'#fdba74'):'#94a3b8')+'">'+(obj.upB>i?'&#10003;':'&#9675;')+' '+d.pathB.levels[i]+'</div>';}).join('')
-      +(obj.upB<5?'<button class="upg-btn pathb" '+(!canB||$m<d.pathB.costs[obj.upB]?'disabled':'')+' onclick="upgPath(\'B\')">'+(canB?'Upgrade $'+d.pathB.costs[obj.upB]:(obj.upA>0?'Path A active':'Max'))+'</button>':'<div style="color:#fb923c;font-size:9px">&#9733; ASCENDED!</div>')
+      +(obj.upB<5?'<button class="upg-btn pathb" '+(!canB||$m<d.pathB.costs[obj.upB]?'disabled':'')+' onclick="upgPath(\'B\')">'+lblB+'</button>':'<div style="color:#fb923c;font-size:9px">&#9733; ASCENDED!</div>')
       +'</div></div>':'<div style="color:#64748b;margin-top:2px;font-size:10px">Game over — view only</div>');
   }
   document.getElementById('sellbtn').style.display=readOnly?'none':'inline-flex';
@@ -2237,8 +2251,9 @@ function liveUpdateInfo(obj){
     setBtn(document.querySelector('.upg-btn.pathb'), obj.upA===0&&obj.upB<5&&$m>=hd.pathB.costs[obj.upB||0]);
   } else if(obj.type){
     var d=TD[obj.type];
-    setBtn(document.querySelector('.upg-btn.patha'), obj.upB===0&&obj.upA<5&&$m>=d.pathA.costs[obj.upA||0]);
-    setBtn(document.querySelector('.upg-btn.pathb'), obj.upA===0&&obj.upB<5&&$m>=d.pathB.costs[obj.upB||0]);
+    var blockA=obj.upA===4&&otherTowerHasAscended(obj.type,'A',obj),blockB=obj.upB===4&&otherTowerHasAscended(obj.type,'B',obj);
+    setBtn(document.querySelector('.upg-btn.patha'), obj.upB===0&&obj.upA<5&&!blockA&&$m>=d.pathA.costs[obj.upA||0]);
+    setBtn(document.querySelector('.upg-btn.pathb'), obj.upA===0&&obj.upB<5&&!blockB&&$m>=d.pathB.costs[obj.upB||0]);
   } else {
     // Bank — target by stable ID set in showInfo
     var bankBtn=document.getElementById('bankupgbtn');
@@ -2249,17 +2264,30 @@ function liveUpdateInfo(obj){
   }
 }
 
+// Rule: only 1 ascended (tier 5) per tower type per path on the whole map
+function otherTowerHasAscended(type,path,exclude){
+  for(var i=0;i<towers.length;i++){
+    var t=towers[i];if(t===exclude)continue;
+    if(t.type!==type)continue;
+    if(path==='A'&&t.upA>=5)return true;
+    if(path==='B'&&t.upB>=5)return true;
+  }
+  return false;
+}
+
 function upgPath(path){
   if(over||won)return;if(!selObj||!selObj.type)return;
   var d=TD[selObj.type];
   if(path==='A'){
     if(selObj.upB>0){setMsg('Already on Path B!');return;}
     if(selObj.upA>=5)return;
+    if(selObj.upA===4&&otherTowerHasAscended(selObj.type,'A',selObj)){setMsg('Only 1 ascended per tower type per route!');return;}
     var cost=d.pathA.costs[selObj.upA];if($m<cost){setMsg('Not enough money!');return;}
     $m-=cost;selObj.upA++;selObj.totalSpent=(selObj.totalSpent!=null?selObj.totalSpent:TD[selObj.type].cost)+cost;
   } else {
     if(selObj.upA>0){setMsg('Already on Path A!');return;}
     if(selObj.upB>=5)return;
+    if(selObj.upB===4&&otherTowerHasAscended(selObj.type,'B',selObj)){setMsg('Only 1 ascended per tower type per route!');return;}
     var cost2=d.pathB.costs[selObj.upB];if($m<cost2){setMsg('Not enough money!');return;}
     $m-=cost2;selObj.upB++;selObj.totalSpent=(selObj.totalSpent!=null?selObj.totalSpent:TD[selObj.type].cost)+cost2;
   }
@@ -2358,12 +2386,16 @@ function cancelSel(){
   setMsg('Select a tower or farm to see placement slots!');
 }
 
+// Rule: every tower, BANK, and hero button greys out when player cannot afford it (single source: TD / FARM_DEF / HEROES)
 function updShop(){
   var shop=document.getElementById('shop');
   if(shop)shop.classList.toggle('gameover',over||won);
-  var costs={dart:80,cannon:200,freeze:150,sniper:300,laser:350,farm:150};
   var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',farm:'bfarm'};
-  for(var k in ids){var b=document.getElementById(ids[k]);if(b)b.classList.toggle('cant',$m<costs[k]);}
+  for(var k in ids){
+    var b=document.getElementById(ids[k]);if(!b)continue;
+    var cost=k==='farm'?FARM_DEF.cost:TD[k].cost;
+    b.classList.toggle('cant',$m<cost);
+  }
   var hbtn=document.getElementById('bhero');
   if(hbtn&&selectedHeroKey)hbtn.classList.toggle('cant',$m<HEROES[selectedHeroKey].cost||!!heroUnit);
 }
