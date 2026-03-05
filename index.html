@@ -486,8 +486,8 @@ function genWave(w){
     // Regular waves: normal mode waves 1–8 are denser and slightly tougher types so early game is neck-and-neck
     var mx2=isHard?Math.min(Math.floor(w*0.26),11):Math.min(Math.floor(w*0.38),13);
     var capN=isHard?65:100;
-    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w===1?8:(w<=8?Math.min(10+Math.floor(w*2.6),capN):Math.min(8+Math.floor(w*3.2),capN)));
-    if(!isHard&&w<=8)mx2=Math.min(Math.floor(w*0.38),10);
+    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w===1?8:(w<=8?Math.min(8+Math.floor(w*2.2),capN):Math.min(8+Math.floor(w*3.2),capN)));
+    if(!isHard&&w<=8)mx2=Math.min(Math.floor(w*0.34),9);
     for(var i=0;i<n2;i++)q.push(Math.min(Math.floor(Math.random()*(mx2+1)),mx2));
   }
   return q;
@@ -531,13 +531,12 @@ function spawnBloon(ti){
   } else if(gameMode==='normal'&&!isBoss){
     var _wm=1+$w*0.07;_hp=Math.ceil(_hp*_wm);
     _spd=Math.min(_spd*(1+$w*0.012),1.45);
-    // Waves 1–8: light pressure so zero damage is possible with good play; goal is to scramble for a bank and get ahead by ~round 9
-    if($w<=8)_hp=Math.ceil(_hp*1.04);
+    // Waves 1–8: no extra HP multiplier so zero damage is achievable; bank penalty (below) only applies when you have a bank
   }
-  // Early BANK greed: banks on field through wave 8 = stronger foes (HP/speed only; life tax & placement penalty unchanged)
+  // Early BANK greed: banks on field through wave 8 = stronger foes (dialed back: 1.35x HP, 1.15x speed)
   if(farms.length>=1&&$w<=8){
-    _hp=Math.ceil(_hp*1.5);
-    _spd=Math.min(_spd*1.25,2.5);
+    _hp=Math.ceil(_hp*1.35);
+    _spd=Math.min(_spd*1.15,2.5);
   }
   var b={id:bid++,dist:-30,hp:_hp,mhp:_hp,spd:_spd,
     x:PP[0].x,y:PP[0].y,col:d.col,sz:d.sz,frz:0,rew:d.rew,leak:d.leak||1,
