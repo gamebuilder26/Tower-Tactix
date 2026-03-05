@@ -249,7 +249,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     </div>
     <button style="margin-top:6px;background:none;border:none;color:#64748b;font-size:11px;cursor:pointer;" onclick="goHeroSelect()">&larr; Back</button>
   </div>
-  <div class="overlay" id="goover"><h2 style="color:#ff3366;text-shadow:0 0 20px #ff336688;">SYSTEM FAILURE</h2><p id="gotext"></p><button class="obtn" onclick="goMenu()">Main Menu</button></div>
+  <div class="overlay" id="goover"><h2 style="color:#ff3366;text-shadow:0 0 20px #ff336688;">SYSTEM FAILURE</h2><p id="gotext"></p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button class="obtn" onclick="inspectMapAfterLoss()" style="background:linear-gradient(180deg,#331828,#1a0c14);border:1px solid #ff3366;">Inspect Map</button><button class="obtn" onclick="goMenu()">Main Menu</button></div></div>
   <div class="overlay" id="winover"><h2 style="color:#00e5ff;text-shadow:0 0 20px #00e5ff88;">GRID SECURED</h2><p id="wintext"></p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button class="obtn" onclick="showReviewMap()" style="background:linear-gradient(180deg,#003344,#001828);border:1px solid #00e5ff;">Review Map</button><button class="obtn" onclick="goMenu()">Main Menu</button></div></div>
 </div>
 <div id="panel">
@@ -481,17 +481,18 @@ function genWave(w){
   var isBossWave=isBossMode&&(w%10===0);
   if(isBossWave){
     var tier=Math.max(0,Math.min(Math.floor(w/10)-1,BOSS_TIERS.length-1));
-    // Boss waves: minion count scales slowly, tier cap also slow
+    // Boss waves: minion count; boss-easy slightly fewer minions than boss-hard
     var mx=Math.min(Math.floor(w*0.30),10);
-    var n=isHard?Math.min(4+Math.floor(w/2),35):Math.min(6+w,40);
+    var n=isHard?Math.min(4+Math.floor(w/2),35):Math.min(5+w,36);
     for(var i=0;i<n;i++)q.push(Math.min(Math.floor(Math.random()*(mx+1)),mx));
     q.push('boss:'+tier);
   } else {
-    // Regular waves: normal mode waves 1–8 are denser and slightly tougher types so early game is neck-and-neck
-    var mx2=isHard?Math.min(Math.floor(w*0.26),11):Math.min(Math.floor(w*0.38),13);
+    // Regular waves: boss-easy a bit lighter; boss-hard and normal unchanged
+    var isEasy=gameMode==='boss-easy';
+    var mx2=isHard?Math.min(Math.floor(w*0.26),11):(isEasy?Math.min(Math.floor(w*0.32),9):Math.min(Math.floor(w*0.38),13));
     var capN=isHard?65:100;
-    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w===1?7:(w<=8?Math.min(8+Math.floor(w*2.2),capN):Math.min(8+Math.floor(w*3.2),capN)));
-    if(!isHard&&w<=8)mx2=Math.min(Math.floor(w*0.34),9);
+    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(isEasy?(w===1?6:Math.min(7+Math.floor(w*2),capN)):(w===1?7:(w<=8?Math.min(8+Math.floor(w*2.2),capN):Math.min(8+Math.floor(w*3.2),capN))));
+    if(!isHard&&w<=8&&!isEasy)mx2=Math.min(Math.floor(w*0.34),9);
     for(var i=0;i<n2;i++)q.push(Math.min(Math.floor(Math.random()*(mx2+1)),mx2));
   }
   return q;
@@ -538,9 +539,13 @@ function spawnBloon(ti){
     var _wm=isBoss?(1+$w*0.004):(1+Math.min($w,20)*0.01+Math.max(0,$w-20)*0.004);
     _hp=Math.ceil(_hp*_wm);
     if(!isBoss)_spd=Math.min(_spd*(1+$w*0.006),2.35);
-  } else if(gameMode==='boss-easy'&&!isBoss){
-    var _wm=1+$w*0.025;_hp=Math.ceil(_hp*_wm);
-    _spd=Math.min(_spd*(1+$w*0.004),1.5);
+  } else if(gameMode==='boss-easy'){
+    if(isBoss){
+      _hp=Math.ceil(_hp*0.92);_spd=_spd*0.96;
+    } else {
+      var _wm=1+$w*0.02;_hp=Math.ceil(_hp*_wm);
+      _spd=Math.min(_spd*(1+$w*0.003),1.45);
+    }
   } else if(gameMode==='normal'&&!isBoss){
     var _wm=1+$w*0.07;_hp=Math.ceil(_hp*_wm);
     _spd=Math.min(_spd*(1+$w*0.012),1.45);
@@ -818,6 +823,10 @@ function showReviewMap(){
   document.getElementById('winover').style.display='none';
   var heroStr=heroUnit?(' | Hero: '+HEROES[heroUnit.heroKey].name):'';
   setMsg('Victory summary — Final: $'+$m+' | \u2665 '+$l+' | Damage: '+Math.round(gameTotalDmg).toLocaleString()+' | Towers: '+towers.length+' | BANKS: '+farms.length+heroStr+' — Click HOME when done.');
+}
+function inspectMapAfterLoss(){
+  document.getElementById('goover').style.display='none';
+  setMsg('Game over — click a tower or bank to view its stats. Click HOME for main menu.');
 }
 
 function endGame(w){
