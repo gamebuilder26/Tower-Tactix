@@ -259,6 +259,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     <button class="tbtn" id="bf" onclick="selT('freeze')"><span class="ticon">&#10053;</span><br>CRYO<span class="tc"><br>&#9670;<span id="cost-freeze"></span></span></button>
     <button class="tbtn" id="bsn" onclick="selT('sniper')"><span class="ticon">&#9144;</span><br>SNIPER<span class="tc"><br>&#9670;<span id="cost-sniper"></span></span></button>
     <button class="tbtn" id="bl" onclick="selT('laser')"><span class="ticon">&#11088;</span><br>LASER<span class="tc"><br>&#9670;<span id="cost-laser"></span></span></button>
+    <button class="tbtn" id="btac" onclick="selT('tac')"><span class="ticon">&#9873;</span><br>TAC<span class="tc"><br>&#9670;<span id="cost-tac"></span></span></button>
     <button class="tbtn" id="bfarm" onclick="selT('farm')"><span class="ticon">&#9651;</span><br>BANK<span class="tc"><br>&#9670;<span id="cost-farm"></span></span><span class="farm-tag">+CR/WAVE</span></button>
     <button class="tbtn" id="bhero" onclick="selT('hero')" style="display:none;border-color:#00e5ff;background:linear-gradient(160deg,#001428,#000d1a);"><span id="heroshopicon" class="ticon">&#9874;</span><br><span id="heroshopname" style="font-family:Orbitron,sans-serif;font-size:8px;letter-spacing:.5px;">HERO</span><span class="tc"><br><span id="heroshopcost">-</span></span></button>
   </div>
@@ -389,6 +390,9 @@ var TD={
   laser:{cost:520,range:135,dmg:2,rate:2.2,col:'#f43f5e',name:'LASER',desc:'Rapid beam chains',
     pathA:{name:'Overcharge',levels:['Dmg x2','Dmg x3','Burn DoT','Plasma Core: dmg x5','Supernova: x8 + burn all'],costs:[180,220,320,4500,16000]},
     pathB:{name:'Chain Beam',levels:['Chain 2','Chain 4','Chain 6','Cascade: chain 10 + dmg x2','Singularity: chain 20 x2 dmg'],costs:[170,210,300,4000,14000]}},
+  tac:{cost:200,range:100,dmg:1,rate:1,col:'#eab308',name:'TAC',desc:'Tac dispenser: throws 1 tac (4 pokies, 4 dmg total) on path near tower; next 4 lives that run over it take damage',
+    pathA:{name:'Fast Tac',levels:['Throw +30%','Throw +50%','Throw +80%','Throw x2.2','Carry over: tacs last 2 rounds'],costs:[85,110,180,2400,8000]},
+    pathB:{name:'Heavy Tacks',levels:['Dmg x2','Dmg x4','Dmg x8','Dmg x16','Juggernaut: dmg x32'],costs:[90,120,200,2800,9500]}},
 };
 
 var FARM_DEF={cost:500,name:'BANK',baseIncome:22,
@@ -460,9 +464,9 @@ var heroUnit=null,heroCooldownLeft=0,heroAbilityReady=false,fortifyActive=false;
 var $m=STARTING_CASH,$l=STARTING_LIVES,$w=0,$s=1;
 var gameTotalDmg=0;
 var running=false,over=false,won=false,cleared=false;
-var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[];
+var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[],traps=[];
 var selType=null,selObj=null,prevSnap=null;
-var spawnQ=[],spawnT=0,bid=0,pid=0,lt=0;
+var spawnQ=[],spawnT=0,bid=0,pid=0,trapId=0,lt=0;
 
 function farmIncome(f){
   var i=FARM_DEF.baseIncome;
@@ -486,7 +490,7 @@ function genWave(w){
     // Regular waves: normal mode waves 1–8 are denser and slightly tougher types so early game is neck-and-neck
     var mx2=isHard?Math.min(Math.floor(w*0.26),11):Math.min(Math.floor(w*0.38),13);
     var capN=isHard?65:100;
-    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w===1?8:(w<=8?Math.min(8+Math.floor(w*2.2),capN):Math.min(8+Math.floor(w*3.2),capN)));
+    var n2=isHard?Math.min(5+Math.floor(w*2.2),capN):(w===1?7:(w<=8?Math.min(8+Math.floor(w*2.2),capN):Math.min(8+Math.floor(w*3.2),capN)));
     if(!isHard&&w<=8)mx2=Math.min(Math.floor(w*0.34),9);
     for(var i=0;i<n2;i++)q.push(Math.min(Math.floor(Math.random()*(mx2+1)),mx2));
   }
@@ -506,6 +510,15 @@ function pathPos(dist){
     r-=s;
   }
   return PP[PP.length-1];
+}
+function pathDistNearTower(tx,ty,pathLength,radius){
+  var step=15,near=[];
+  for(var d=0;d<=pathLength;d+=step){
+    var p=pathPos(d);
+    if(Math.hypot(p.x-tx,p.y-ty)<=radius)near.push(d);
+  }
+  if(near.length===0)return pathLength*0.3+Math.random()*pathLength*0.4;
+  return near[Math.floor(Math.random()*near.length)];
 }
 
 function spawnBloon(ti){
@@ -611,6 +624,10 @@ function getTowerStats(t){
     if(pa>=1)dmg*=2;if(pa>=2)dmg*=3;if(pa>=3)burnMode=true;if(pa>=4)dmg*=5;if(pa>=5){dmg*=8;burnMode=true;}
     if(pb>=1)chainCount=2;if(pb>=2)chainCount=4;if(pb>=3)chainCount=6;if(pb>=4){chainCount=10;dmg*=2;}if(pb>=5){chainCount=20;dmg*=2;}
   }
+  if(t.type==='tac'){
+    if(pa>=1)rate*=1.3;if(pa>=2)rate*=1.5;if(pa>=3)rate*=1.8;if(pa>=4)rate*=2.2;
+    if(pb>=1)dmg*=2;if(pb>=2)dmg*=2;if(pb>=3)dmg*=2;if(pb>=4)dmg*=2;if(pb>=5)dmg*=2;
+  }
   return{dmg:dmg,rate:rate,range:infiniteRange?9999:range,splash:splash,freezeAmt:freezeAmt,
     permafrost:permafrost,burnMode:burnMode,chainCount:chainCount,clusterCount:clusterCount,nukeMode:nukeMode};
 }
@@ -637,12 +654,38 @@ function update(dt){
       if($l<=0&&!over)endGame(false);
     } else {
       var pp=pathPos(b.dist);b.x=pp.x;b.y=pp.y;
+      for(var tri=traps.length-1;tri>=0;tri--){
+        var tr=traps[tri];
+        if(Math.abs(b.dist-tr.pathDist)<28){
+          var damageDealt=Math.min(b.hp,tr.charges*tr.dmg);
+          if(damageDealt<=0)break;
+          var chargesUsed=Math.min(tr.charges,Math.ceil(damageDealt/tr.dmg));
+          hitBloon(b,{dmg:damageDealt,frz:false,burn:false,spl:0,clusterCount:0,chainCount:0,srcT:tr.srcT});
+          tr.charges-=chargesUsed;
+          if(tr.charges<=0)traps.splice(tri,1);
+          break;
+        }
+      }
     }
   }
   bloons=bloons.filter(function(b){return !b.dead&&b.hp>0.001;});
 
+  var TAC_THROW_INTERVAL=4,TAC_PLACE_RADIUS=70;
   for(var ti=0;ti<towers.length;ti++){
-    var t=towers[ti];if(!t.lf)t.lf=0;
+    var t=towers[ti];
+    if(t.type==='tac'){
+      var st=getTowerStats(t);
+      var throwIv=TAC_THROW_INTERVAL/Math.max(0.2,st.rate);
+      if(!t.tacThrowTime)t.tacThrowTime=now;
+      if(running&&now-t.tacThrowTime>=throwIv&&traps.length<30){
+        t.tacThrowTime=now;
+        t.shots=(t.shots||0)+1;
+        var roundsLeft=(t.upA>=5)?2:1;
+        traps.push({id:trapId++,pathDist:pathDistNearTower(t.x,t.y,pl,TAC_PLACE_RADIUS),dmg:st.dmg,charges:4,roundsLeft:roundsLeft,srcT:t});
+      }
+      continue;
+    }
+    if(!t.lf)t.lf=0;
     var st=getTowerStats(t),iv=(1/st.rate)/sm;
     if(now-t.lf>=iv){
       var best=null,bd=-1;
@@ -756,6 +799,8 @@ function update(dt){
 
   if(running&&spawnQ.length===0&&bloons.length===0&&!cleared){
     cleared=true;running=false;fortifyActive=false;
+    for(var ti=0;ti<traps.length;ti++){var tr=traps[ti];tr.roundsLeft=(tr.roundsLeft||1)-1;}
+    traps=traps.filter(function(tr){return (tr.roundsLeft||0)>0;});
     for(var fmi2=0;fmi2<farms.length;fmi2++)farms[fmi2].wavesGrown=Math.min((farms[fmi2].wavesGrown||0)+1,3);
     var bonBase=gameMode==='boss-hard'?200:100;var bonMult=gameMode==='boss-hard'?55:(gameMode==='normal'?19:22);var bonExtra=gameMode==='boss-hard'?Math.floor($w/5)*120:Math.floor($w/5)*30;var bon=bonBase+$w*bonMult+bonExtra;$m+=bon;document.getElementById('mdisp').textContent=$m;
     var sb=document.getElementById('startbtn');
@@ -1189,6 +1234,40 @@ function drawTower(c,t,sel){
     emitG.addColorStop(0,'#fff');emitG.addColorStop(0.5,lasAc);emitG.addColorStop(1,'transparent');
     c.fillStyle=emitG;c.beginPath();c.arc(coreR*1.3+emitR,0,emitR+4,0,Math.PI*2);c.fill();
     c.shadowBlur=0;c.globalAlpha=1;
+    c.restore();
+  } else if(type==='tac'){
+    // ── TAC: Spinning tack ring ─────────────────────────────────────────────
+    c.save();c.translate(x,y-8);
+    var tacAc=tier>=4?'#fde047':tier>=2?'#facc15':'#eab308';
+    var tacBase=tier>=3?'#422006':'#1c1917';
+    var ringR=6+tier*1.2;
+    var ringG=c.createRadialGradient(-ringR*.3,-ringR*.3,1,0,0,ringR);
+    ringG.addColorStop(0,'rgba(255,255,255,0.25)');ringG.addColorStop(0.4,tacBase);ringG.addColorStop(1,'rgba(0,0,0,0.5)');
+    c.fillStyle=ringG;c.beginPath();c.arc(0,0,ringR,0,Math.PI*2);c.fill();
+    c.strokeStyle=tacAc;c.lineWidth=1;c.globalAlpha=0.7;c.stroke();c.globalAlpha=1;
+    var nTacks=4+Math.min(tier*2,8);
+    c.save();c.rotate(spin*1.5);
+    for(var ti=0;ti<nTacks;ti++){
+      var ta=(ti/nTacks)*Math.PI*2;
+      var tr=ringR+2+tier, tlen=3+tier*.8;
+      var tx=Math.cos(ta)*tr,ty=Math.sin(ta)*tr;
+      c.fillStyle=tacAc;c.strokeStyle=tacBase;
+      c.beginPath();c.moveTo(tx+Math.cos(ta)*tlen,ty+Math.sin(ta)*tlen);
+      c.lineTo(tx-Math.cos(ta)*tlen*.5+Math.sin(ta)*.8,ty-Math.sin(ta)*tlen*.5-Math.cos(ta)*.8);
+      c.lineTo(tx-Math.cos(ta)*tlen*.5-Math.sin(ta)*.8,ty-Math.sin(ta)*tlen*.5+Math.cos(ta)*.8);c.closePath();c.fill();c.stroke();
+    }
+    c.restore();
+    if(mf>0){
+      c.shadowColor=tacAc;c.shadowBlur=10;c.globalAlpha=mf;
+      c.fillStyle=tacAc;c.beginPath();c.arc(0,0,ringR*.8,0,Math.PI*2);c.fill();
+      c.shadowBlur=0;c.globalAlpha=1;
+    }
+    c.restore();
+    c.save();c.translate(x,y-8);c.rotate(bangle);
+    var tackOut=8+tier*2;
+    var tg=c.createRadialGradient(tackOut,0,0,tackOut,0,4);
+    tg.addColorStop(0,'#fff');tg.addColorStop(0.5,tacAc);tg.addColorStop(1,tacBase);
+    c.fillStyle=tg;c.beginPath();c.ellipse(tackOut,0,4,2,0,0,Math.PI*2);c.fill();
     c.restore();
   }
 
@@ -1705,6 +1784,22 @@ function draw(){
     }
   }
 
+  // ── TAC traps on path (each has 4 tacs; 1 tac = 1 dmg when bloon reaches it) ──
+  for(var tri=0;tri<traps.length;tri++){
+    var tr=traps[tri],pos=pathPos(tr.pathDist),ch=tr.charges||0;
+    if(ch<=0)continue;
+    cx.save();
+    cx.translate(pos.x,pos.y);
+    for(var tc=0;tc<ch;tc++){
+      var ta=(tc/ch)*Math.PI*2+now*0.5;
+      cx.save();cx.rotate(ta);cx.translate(5,0);
+      cx.fillStyle='#eab308';cx.strokeStyle='#422006';cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(4,0);cx.lineTo(-2,-1.5);cx.lineTo(-2,1.5);cx.closePath();cx.fill();cx.stroke();
+      cx.restore();
+    }
+    cx.restore();
+  }
+
   // ── Enemy creatures ──
   for(var blo=0;blo<bloons.length;blo++){
     var b3=bloons[blo];
@@ -2040,6 +2135,10 @@ function draw(){
       // Piercing round
       cx.fillStyle='#c084fc';cx.beginPath();cx.ellipse(0,0,8,3,0,0,Math.PI*2);cx.fill();
       cx.globalAlpha=0.5;cx.strokeStyle='#fff';cx.lineWidth=1;cx.beginPath();cx.moveTo(-8,0);cx.lineTo(-16,0);cx.stroke();cx.globalAlpha=1;
+    } else if(pr.type==='tac'){
+      // Tack spike
+      cx.fillStyle=pr.col;cx.strokeStyle='#422006';cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(6,0);cx.lineTo(-4,-2.5);cx.lineTo(-4,2.5);cx.closePath();cx.fill();cx.stroke();
     } else {
       // Default orb
       var og=cx.createRadialGradient(-1,-1,0,0,0,5);
@@ -2375,7 +2474,7 @@ function selT(type){
   selType=type;selObj=null;prevSnap=null;
   document.getElementById('info').style.display='none';document.getElementById('sellbtn').style.display='none';
   document.querySelectorAll('.tbtn').forEach(function(b){b.classList.remove('sel');});
-  var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',farm:'bfarm'};
+  var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',tac:'btac',farm:'bfarm'};
   if(ids[type])document.getElementById(ids[type]).classList.add('sel');
   setMsg(type==='farm'?'Tap a slot to place BANK!':'Tap a slot to place '+TD[type].name+'!');
   document.getElementById('cancelbtn').style.display='inline-block';
@@ -2392,7 +2491,7 @@ function cancelSel(){
 function updShop(){
   var shop=document.getElementById('shop');
   if(shop)shop.classList.toggle('gameover',over||won);
-  var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',farm:'bfarm'};
+  var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',tac:'btac',farm:'bfarm'};
   for(var k in ids){
     var b=document.getElementById(ids[k]);if(!b)continue;
     var cost=k==='farm'?FARM_DEF.cost:TD[k].cost;
@@ -2582,7 +2681,7 @@ function goMenu(){
 
 function resetGame(){
   $m=STARTING_CASH;$l=STARTING_LIVES;$w=0;$s=1;gameTotalDmg=0;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
-  towers=[];farms=[];bloons=[];projs=[];parts=[];floaties=[];
+  towers=[];farms=[];bloons=[];projs=[];parts=[];floaties=[];traps=[];
   selType=null;selObj=null;prevSnap=null;spawnQ=[];spawnT=0;
   activeBoss=null;heroUnit=null;heroAbilityReady=false;heroCooldownLeft=0;fortifyActive=false;
   document.getElementById('mdisp').textContent=$m;
@@ -2663,7 +2762,7 @@ function loadGame(slot){
     heroAbilityReady=s.heroAbilityReady;
     heroCooldownLeft=s.heroCooldownLeft;
     fortifyActive=s.fortifyActive;
-    bloons=[];projs=[];parts=[];floaties=[];spawnQ=[];spawnT=0;activeBoss=null;
+    bloons=[];projs=[];parts=[];floaties=[];traps=[];spawnQ=[];spawnT=0;activeBoss=null;
     selType=null;selObj=null;prevSnap=null;
 
     // Hide overlays
@@ -2770,7 +2869,7 @@ window.addEventListener('resize',doResize);
 doResize();updShop();lt=performance.now();
 // Populate shop costs from data (single source of truth)
 (function(){
-  var map={dart:'dart',cannon:'cannon',freeze:'freeze',sniper:'sniper',laser:'laser'};
+  var map={dart:'dart',cannon:'cannon',freeze:'freeze',sniper:'sniper',laser:'laser',tac:'tac'};
   for(var k in map){var el=document.getElementById('cost-'+k);if(el)el.textContent=TD[map[k]].cost;}
   var fe=document.getElementById('cost-farm');if(fe)fe.textContent=FARM_DEF.cost;
 })();
