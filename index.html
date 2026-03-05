@@ -2323,20 +2323,20 @@ function draw(){
   }
   cx.globalAlpha=1;
 
-  // Paused overlay
+  // Paused overlay: dim + clickable Resume button
   if(paused){
-    cx.fillStyle='rgba(0,0,0,0.45)';cx.fillRect(0,0,W,H);
-    cx.fillStyle='rgba(15,118,110,0.9)';
-    var pw=160,ph=56,px2=(W-pw)/2,py2=(H-ph)/2;
+    cx.fillStyle='rgba(0,0,0,0.35)';cx.fillRect(0,0,W,H);
+    var rw=130,rh=44,rx=(W-rw)/2,ry=(H-rh)/2,rr=10;
+    cx.fillStyle='rgba(255,170,0,0.95)';
     cx.beginPath();
-    var pr2=12;
-    cx.moveTo(px2+pr2,py2);cx.lineTo(px2+pw-pr2,py2);cx.arcTo(px2+pw,py2,px2+pw,py2+pr2,pr2);
-    cx.lineTo(px2+pw,py2+ph-pr2);cx.arcTo(px2+pw,py2+ph,px2+pw-pr2,py2+ph,pr2);
-    cx.lineTo(px2+pr2,py2+ph);cx.arcTo(px2,py2+ph,px2,py2+ph-pr2,pr2);
-    cx.lineTo(px2,py2+pr2);cx.arcTo(px2,py2,px2+pr2,py2,pr2);
+    cx.moveTo(rx+rr,ry);cx.lineTo(rx+rw-rr,ry);cx.arcTo(rx+rw,ry,rx+rw,ry+rr,rr);
+    cx.lineTo(rx+rw,ry+rh-rr);cx.arcTo(rx+rw,ry+rh,rx+rw-rr,ry+rh,rr);
+    cx.lineTo(rx+rr,ry+rh);cx.arcTo(rx,ry+rh,rx,ry+rh-rr,rr);
+    cx.lineTo(rx,ry+rr);cx.arcTo(rx,ry,rx+rr,ry,rr);
     cx.closePath();cx.fill();
-    cx.fillStyle='#fff';cx.font='bold 22px sans-serif';cx.textAlign='center';cx.textBaseline='middle';
-    cx.fillText('⏸ PAUSED',W/2,H/2);
+    cx.strokeStyle='rgba(255,220,100,0.9)';cx.lineWidth=2;cx.stroke();
+    cx.fillStyle='#000d1a';cx.font='bold 16px sans-serif';cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillText('▶ RESUME',W/2,H/2);
   }
 }
 
@@ -2383,6 +2383,11 @@ function tryPlaceAt(x,y){
 }
 
 function tap(x,y){
+  if(paused){
+    var rw=130,rh=44,rx=(cv.width-rw)/2,ry=(cv.height-rh)/2;
+    if(x>=rx&&x<=rx+rw&&y>=ry&&y<=ry+rh){togglePause();}
+    return;
+  }
   if(over||won){
     selType=null;prevSnap=null;
     var hit=null;
@@ -2713,7 +2718,11 @@ function updateBossBar(){
   document.getElementById('bosshptxt').textContent=activeBoss.bossName+' '+Math.max(0,Math.round(activeBoss.hp))+'/'+activeBoss.mhp;
 }
 
-function toggleSpd(){$s=$s===1?5:$s===5?10:1;document.getElementById('spdbtn').textContent='⚡ '+$s+'X';}
+function toggleSpd(){
+  $s=$s===1?5:$s===5?10:1;
+  document.getElementById('spdbtn').textContent='⚡ '+$s+'X';
+  if($w===0&&!running&&!over&&!won){startWave();}
+}
 
 function togglePause(){
   paused=!paused;
