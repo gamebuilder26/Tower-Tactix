@@ -51,7 +51,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
   color:#00e5ff;
 }
 .tbtn .tc{color:var(--tron-cyan);font-size:9px;font-weight:700;}
-.tbtn.cant{opacity:.35;}
+.tbtn.cant{opacity:.35;pointer-events:none;cursor:not-allowed;}
 #shop.gameover .tbtn{pointer-events:none;opacity:.55;cursor:default;}
 .tbtn .ticon{font-size:14px;line-height:1;}
 
@@ -2401,10 +2401,18 @@ function updShop(){
   for(var k in ids){
     var b=document.getElementById(ids[k]);if(!b)continue;
     var cost=k==='farm'?FARM_DEF.cost:TD[k].cost;
-    b.classList.toggle('cant',$m<cost);
+    var cant=$m<cost;
+    b.classList.toggle('cant',cant);
+    b.style.pointerEvents=cant?'none':'';
+    b.style.cursor=cant?'not-allowed':'pointer';
   }
   var hbtn=document.getElementById('bhero');
-  if(hbtn&&selectedHeroKey)hbtn.classList.toggle('cant',$m<HEROES[selectedHeroKey].cost||!!heroUnit);
+  if(hbtn&&selectedHeroKey){
+    var hcant=$m<HEROES[selectedHeroKey].cost||!!heroUnit;
+    hbtn.classList.toggle('cant',hcant);
+    hbtn.style.pointerEvents=hcant?'none':'';
+    hbtn.style.cursor=hcant?'not-allowed':'';
+  }
 }
 
 function setMsg(m){document.getElementById('msg').textContent=m;}
