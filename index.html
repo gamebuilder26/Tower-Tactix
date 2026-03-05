@@ -116,6 +116,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
 .upg-btn.pathb:hover:not(:disabled){box-shadow:0 0 10px #ff660055;}
 .upg-btn:disabled{opacity:.3;cursor:not-allowed;}
 .upg-btn:active:not(:disabled){transform:scale(.97);}
+.upg-btn.ascended-cap{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
 
 /* ── STAT BAR ── */
 .statbar{margin-top:4px;padding:4px 6px;background:#000d1a;border:1px solid #00334d;border-radius:5px;display:flex;gap:6px;}
@@ -1320,29 +1321,70 @@ function drawTower(c,t,sel){
     c.fillStyle=tg;c.beginPath();c.ellipse(tackOut,0,4,2,0,0,Math.PI*2);c.fill();
     c.restore();
   } else if(type==='wizard'){
-    c.save();c.translate(x,y-8);
+    // Wizard figure: robes, pointed hat, staff with orb
+    c.save();c.translate(x,y);
     var wizAc=tier>=4?'#fbbf24':tier>=2?'#f97316':'#fb7185';
-    var wizBase='#431407';
-    var orbR=5+tier*1.2;
-    c.shadowColor=wizAc;c.shadowBlur=8;
+    var robeCol=tier>=4?'#78350f':tier>=2?'#92400e':'#a16207';
+    var robeDark='#451a03';
+    // Base / robe hem
+    c.fillStyle=robeDark;c.beginPath();c.ellipse(0,10,14,5,0,0,Math.PI*2);c.fill();
+    c.fillStyle=robeCol;c.beginPath();c.moveTo(-12,10);c.lineTo(-10,-2);c.lineTo(0,4);c.lineTo(10,-2);c.lineTo(12,10);c.closePath();c.fill();
+    c.strokeStyle='#292524';c.lineWidth=1;c.stroke();
+    // Belt
+    c.fillStyle='#b45309';c.fillRect(-6,-1,12,3);
+    // Torso/chest highlight
+    c.fillStyle=lighten(robeCol);c.beginPath();c.ellipse(0,-2,4,6,0,0,Math.PI*2);c.fill();
+    // Hood/head (round)
+    c.fillStyle='#fef3c7';c.beginPath();c.arc(0,-10,5,0,Math.PI*2);c.fill();
+    c.strokeStyle='#78716c';c.lineWidth=0.8;c.stroke();
+    // Pointed hat
+    c.fillStyle=robeDark;c.beginPath();c.moveTo(0,-18);c.lineTo(-6,-14);c.lineTo(0,-8);c.lineTo(6,-14);c.closePath();c.fill();
+    c.strokeStyle='#1c1917';c.lineWidth=1;c.stroke();
+    // Staff (behind)
+    c.save();c.translate(8,2);c.rotate(-0.2);
+    c.strokeStyle='#44403c';c.lineWidth=2.5;c.beginPath();c.moveTo(0,12);c.lineTo(0,-14);c.stroke();
+    var orbR=4+tier*0.8;
+    c.shadowColor=wizAc;c.shadowBlur=6;
     var og=c.createRadialGradient(0,0,0,0,0,orbR);
-    og.addColorStop(0,'#fff');og.addColorStop(0.4,wizAc);og.addColorStop(1,wizBase);
-    c.fillStyle=og;c.beginPath();c.arc(0,0,orbR,0,Math.PI*2);c.fill();c.shadowBlur=0;
-    c.strokeStyle='rgba(255,200,100,0.5)';c.lineWidth=1;c.stroke();
+    og.addColorStop(0,'#fff');og.addColorStop(0.5,wizAc);og.addColorStop(1,'#431407');
+    c.fillStyle=og;c.beginPath();c.arc(0,-14,orbR,0,Math.PI*2);c.fill();c.shadowBlur=0;
     c.restore();
+    c.restore();
+    // Aim / firing orb
     c.save();c.translate(x,y-8);c.rotate(bangle);
     var fg=c.createRadialGradient(10,0,0,10,0,6);
     fg.addColorStop(0,'#fff');fg.addColorStop(0.5,wizAc);fg.addColorStop(1,'transparent');
     if(mf>0){c.globalAlpha=mf;c.fillStyle=fg;c.beginPath();c.arc(10,0,6,0,Math.PI*2);c.fill();}
     c.globalAlpha=1;c.restore();
   } else if(type==='necro'){
-    c.save();c.translate(x,y-8);
+    // Necromancer: dark-robed wizard figure, hood, staff/skull
+    c.save();c.translate(x,y);
     var necAc='#a78bfa';var necBase='#1e1b4b';
-    var skullR=5+tier*1;
-    c.fillStyle=necBase;c.beginPath();c.arc(0,0,skullR*1.2,0,Math.PI*2);c.fill();
-    c.strokeStyle=necAc;c.lineWidth=1;c.globalAlpha=0.8;c.stroke();c.globalAlpha=1;
-    c.fillStyle=necAc;c.font='bold '+(8+tier)+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('\u2660',0,0);
+    var robeCol='#2e1065';var robeDark='#0f0722';
+    // Base / dark robe hem
+    c.fillStyle=robeDark;c.beginPath();c.ellipse(0,10,14,5,0,0,Math.PI*2);c.fill();
+    c.fillStyle=robeCol;c.beginPath();c.moveTo(-12,10);c.lineTo(-10,-2);c.lineTo(0,4);c.lineTo(10,-2);c.lineTo(12,10);c.closePath();c.fill();
+    c.strokeStyle='#1e1b4b';c.lineWidth=1;c.stroke();
+    // Belt
+    c.fillStyle='#4c1d95';c.fillRect(-6,-1,12,3);
+    // Torso
+    c.fillStyle=necAc+'33';c.beginPath();c.ellipse(0,-2,4,6,0,0,Math.PI*2);c.fill();
+    // Hood / head (dark)
+    c.fillStyle='#1e1b4b';c.beginPath();c.arc(0,-10,5,0,Math.PI*2);c.fill();
+    c.strokeStyle=necAc+'99';c.lineWidth=0.8;c.stroke();
+    // Pointed hood (taller, darker)
+    c.fillStyle=robeDark;c.beginPath();c.moveTo(0,-20);c.lineTo(-6,-14);c.lineTo(0,-8);c.lineTo(6,-14);c.closePath();c.fill();
+    c.strokeStyle='#0f0722';c.lineWidth=1;c.stroke();
+    // Eyes glow
+    c.fillStyle=necAc;c.globalAlpha=0.9;c.beginPath();c.arc(-2,-11,1.2,0,Math.PI*2);c.fill();c.beginPath();c.arc(2,-11,1.2,0,Math.PI*2);c.fill();c.globalAlpha=1;
+    // Staff (behind)
+    c.save();c.translate(8,2);c.rotate(-0.2);
+    c.strokeStyle='#312e81';c.lineWidth=2.5;c.beginPath();c.moveTo(0,12);c.lineTo(0,-14);c.stroke();
+    c.fillStyle=necBase;c.beginPath();c.arc(0,-14,4,0,Math.PI*2);c.fill();
+    c.fillStyle=necAc;c.font='bold 10px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('\u2660',0,-14);
     c.restore();
+    c.restore();
+    // Aim line
     c.save();c.translate(x,y-8);c.rotate(bangle);
     c.globalAlpha=0.6;c.strokeStyle=necAc;c.lineWidth=2;c.beginPath();c.moveTo(0,0);c.lineTo(12,0);c.stroke();c.globalAlpha=1;
     c.restore();
@@ -2165,6 +2207,22 @@ function draw(){
         cx.beginPath();cx.arc(bx+Math.cos(fpa)*fpr,by+bob+Math.sin(fpa)*fpr,2,0,Math.PI*2);cx.fill();}
       cx.globalAlpha=1;cx.restore();
     }
+    // Curse: dark cloud spiraling around the bloon (shifts with curse jump since it's drawn on the afflicted target)
+    if(b3.curse){
+      cx.save();
+      var spiralAngle=now*0.45+b3.id*0.7;
+      var cloudR=sz*1.35;
+      for(var cc=0;cc<5;cc++){
+        var ca=spiralAngle+(cc/5)*Math.PI*2;
+        var cr=cloudR+Math.sin(now*2+cc)*sz*0.2;
+        var cx2=bx+Math.cos(ca)*cr,cy2=by+bob+Math.sin(ca)*cr;
+        var cg=cx.createRadialGradient(cx2-sz*0.3,cy2-sz*0.3,0,cx2,cy2,sz*1.1);
+        cg.addColorStop(0,'rgba(60,20,80,0.55)');cg.addColorStop(0.5,'rgba(30,5,50,0.4)');cg.addColorStop(1,'rgba(10,0,20,0)');
+        cx.globalAlpha=0.7+0.2*Math.sin(now*3+cc+b3.id);
+        cx.fillStyle=cg;cx.beginPath();cx.arc(cx2,cy2,sz*1.1,0,Math.PI*2);cx.fill();
+      }
+      cx.globalAlpha=1;cx.restore();
+    }
 
     // HP bar
     if(!b3.boss&&b3.hp<b3.mhp){
@@ -2289,9 +2347,40 @@ function updPrev(x,y){
 }
 cv.addEventListener('mousemove',function(e){if(selType){var p=getXY(e.clientX,e.clientY);updPrev(p.x,p.y);}});
 cv.addEventListener('mouseleave',function(){prevSnap=null;});
+cv.addEventListener('mousedown',function(e){if(selType){var p=getXY(e.clientX,e.clientY);updPrev(p.x,p.y);}});
+cv.addEventListener('mouseup',function(e){if(selType){var p=getXY(e.clientX,e.clientY);updPrev(p.x,p.y);tryPlaceAt(p.x,p.y);}});
 cv.addEventListener('touchmove',function(e){e.preventDefault();if(selType){var t=e.touches[0],p=getXY(t.clientX,t.clientY);updPrev(p.x,p.y);}},{passive:false});
-cv.addEventListener('touchend',function(e){e.preventDefault();var t=e.changedTouches[0],p=getXY(t.clientX,t.clientY);tap(p.x,p.y);},{passive:false});
+cv.addEventListener('touchend',function(e){e.preventDefault();var t=e.changedTouches[0],p=getXY(t.clientX,t.clientY);updPrev(p.x,p.y);tryPlaceAt(p.x,p.y);tap(p.x,p.y);},{passive:false});
 cv.addEventListener('click',function(e){var p=getXY(e.clientX,e.clientY);tap(p.x,p.y);});
+
+function tryPlaceAt(x,y){
+  if(!selType||over||won)return;
+  if(selType==='hero'){
+    var hd=HEROES[selectedHeroKey];
+    if(heroUnit){setMsg(hd.name+' already placed!');return;}
+    if($m<hd.cost){setMsg('Need $'+hd.cost+'!');return;}
+    var s=nearSlot(x,y);if(!s){setMsg('Release on a highlighted slot!');return;}
+    $m-=hd.cost;document.getElementById('mdisp').textContent=$m;
+    heroUnit={x:s.x,y:s.y,heroKey:selectedHeroKey,upA:0,upB:0,lf:0,pops:0,totalDmg:0,shots:0,totalSpent:hd.cost};
+    cancelSel();heroAbilityReady=true;updateAbilityBtn();updShop();
+    setMsg(hd.icon+' '+hd.name+' deployed!');
+    return;
+  }
+  if(selType==='farm'){
+    if($m<FARM_DEF.cost){setMsg('Not enough money!');return;}
+    var z=nearZone(x,y);if(!z){setMsg('Release on a highlighted zone!');return;}
+    $m-=FARM_DEF.cost;document.getElementById('mdisp').textContent=$m;
+    farms.push({x:z.x,y:z.y,up:0,wavesGrown:0,totalEarned:0,farmTimer:0,totalSpent:FARM_DEF.cost});
+    prevSnap=null;updShop();cancelSel();setMsg('BANK placed!');
+    return;
+  }
+  var cost=TD[selType].cost;
+  if($m<cost){setMsg('Not enough money!');return;}
+  var s2=nearSlot(x,y);if(!s2){setMsg('Release on a highlighted slot!');return;}
+  $m-=cost;document.getElementById('mdisp').textContent=$m;
+  towers.push({x:s2.x,y:s2.y,type:selType,upA:0,upB:0,lf:0,pops:0,totalDmg:0,shots:0,lastAngle:-Math.PI/2,totalSpent:cost});
+  prevSnap=null;updShop();cancelSel();setMsg(TD[selType].name+' placed!');
+}
 
 function tap(x,y){
   if(over||won){
@@ -2304,34 +2393,8 @@ function tap(x,y){
     else{selObj=null;document.getElementById('info').style.display='none';document.getElementById('sellbtn').style.display='none';}
     return;
   }
-  if(selType==='hero'){
-    var hd=HEROES[selectedHeroKey];
-    if(heroUnit){setMsg(hd.name+' already placed!');return;}
-    if($m<hd.cost){setMsg('Need $'+hd.cost+'!');return;}
-    var s=nearSlot(x,y);if(!s){setMsg('Tap a highlighted slot!');return;}
-    $m-=hd.cost;document.getElementById('mdisp').textContent=$m;
-    heroUnit={x:s.x,y:s.y,heroKey:selectedHeroKey,upA:0,upB:0,lf:0,pops:0,totalDmg:0,shots:0,totalSpent:hd.cost};
-    cancelSel();heroAbilityReady=true;updateAbilityBtn();updShop();
-    setMsg(hd.icon+' '+hd.name+' deployed!');
-    return;
-  }
-  if(selType){
-    var isFarm=selType==='farm',cost=isFarm?FARM_DEF.cost:TD[selType].cost;
-    if($m<cost){setMsg('Not enough money!');return;}
-    if(isFarm){
-      var z=nearZone(x,y);if(!z){setMsg('Tap a highlighted zone!');return;}
-      $m-=cost;document.getElementById('mdisp').textContent=$m;
-      farms.push({x:z.x,y:z.y,up:0,wavesGrown:0,totalEarned:0,farmTimer:0,totalSpent:FARM_DEF.cost});
-      prevSnap=null;updShop();cancelSel();
-      setMsg('BANK placed!');
-    } else {
-      var s2=nearSlot(x,y);if(!s2){setMsg('Tap a highlighted slot!');return;}
-      $m-=cost;document.getElementById('mdisp').textContent=$m;
-      towers.push({x:s2.x,y:s2.y,type:selType,upA:0,upB:0,lf:0,pops:0,totalDmg:0,shots:0,lastAngle:-Math.PI/2,totalSpent:cost});
-      var placedName=TD[selType].name;
-      prevSnap=null;updShop();cancelSel();setMsg(placedName+' placed!');
-    }
-  } else {
+  if(selType)return;
+  {
     var hit=null;
     if(heroUnit&&Math.hypot(heroUnit.x-x,heroUnit.y-y)<24)hit=heroUnit;
     if(!hit)for(var i=0;i<towers.length;i++){if(Math.hypot(towers[i].x-x,towers[i].y-y)<22){hit=towers[i];break;}}
@@ -2377,11 +2440,11 @@ function showInfo(obj){
       +(!readOnly?'<div class="upg-paths">'
       +'<div class="upg-path"><h4>&#127823; '+d.pathA.name+'</h4>'
       +[0,1,2,3,4].map(function(i){return'<div style="font-size:9px;color:'+(obj.upA>i?(i>=3?'#f5c842':'#86efac'):'#94a3b8')+'">'+(obj.upA>i?'&#10003;':'&#9675;')+' '+d.pathA.levels[i]+'</div>';}).join('')
-      +(obj.upA<5?'<button class="upg-btn patha" '+(!canA||$m<d.pathA.costs[obj.upA]?'disabled':'')+' onclick="upgPath(\'A\')">'+lblA+'</button>':'<div style="color:#f5c842;font-size:9px">&#9733; ASCENDED!</div>')
+      +(obj.upA<5?'<button class="upg-btn patha" '+(!canA||$m<d.pathA.costs[obj.upA]?'disabled':'')+' onclick="upgPath(\'A\')">'+lblA+'</button>':'<div class="upg-btn patha ascended-cap" style="display:flex;align-items:center;justify-content:center;color:#f5c842;border-color:#f5c842;background:linear-gradient(160deg,#2a2008,#0d0a00);cursor:default;pointer-events:none;">ASCENDED</div>')
       +'</div>'
       +'<div class="upg-path"><h4>&#127825; '+d.pathB.name+'</h4>'
       +[0,1,2,3,4].map(function(i){return'<div style="font-size:9px;color:'+(obj.upB>i?(i>=3?'#fb923c':'#fdba74'):'#94a3b8')+'">'+(obj.upB>i?'&#10003;':'&#9675;')+' '+d.pathB.levels[i]+'</div>';}).join('')
-      +(obj.upB<5?'<button class="upg-btn pathb" '+(!canB||$m<d.pathB.costs[obj.upB]?'disabled':'')+' onclick="upgPath(\'B\')">'+lblB+'</button>':'<div style="color:#fb923c;font-size:9px">&#9733; ASCENDED!</div>')
+      +(obj.upB<5?'<button class="upg-btn pathb" '+(!canB||$m<d.pathB.costs[obj.upB]?'disabled':'')+' onclick="upgPath(\'B\')">'+lblB+'</button>':'<div class="upg-btn pathb ascended-cap" style="display:flex;align-items:center;justify-content:center;color:#f5c842;border-color:#f5c842;background:linear-gradient(160deg,#2a2008,#0d0a00);cursor:default;pointer-events:none;">ASCENDED</div>')
       +'</div></div>':'<div style="color:#64748b;margin-top:2px;font-size:10px">Game over — view only</div>');
   }
   document.getElementById('sellbtn').style.display=readOnly?'none':'inline-flex';
@@ -2404,7 +2467,7 @@ function showHeroInfo(h){
     :('<div class="upg-paths">'
     +'<div class="upg-path"><h4>&#127823; '+hd.pathA.name+'</h4>'
     +[0,1,2].map(function(i){return'<div style="font-size:9px;color:'+((h.upA||0)>i?'#86efac':'#94a3b8')+'">'+(((h.upA||0)>i)?'&#10003;':'&#9675;')+' '+hd.pathA.levels[i]+'</div>';}).join('')
-    +((h.upA||0)<3?'<button class="upg-btn patha" '+((h.upB>0||$m<hd.pathA.costs[h.upA||0])?'disabled':'')+' onclick="upgHero(\'A\')">Upgrade $'+hd.pathA.costs[h.upA||0]+'</button>':'<div style="color:#f5c842;font-size:9px">&#9733; ASCENDED!</div>')
+    +((h.upA||0)<3?'<button class="upg-btn patha" '+((h.upB>0||$m<hd.pathA.costs[h.upA||0])?'disabled':'')+' onclick="upgHero(\'A\')">Upgrade $'+hd.pathA.costs[h.upA||0]+'</button>':'<div class="upg-btn patha ascended-cap" style="display:flex;align-items:center;justify-content:center;color:#f5c842;border-color:#f5c842;background:linear-gradient(160deg,#2a2008,#0d0a00);cursor:default;pointer-events:none;">ASCENDED</div>')
     +'</div>'
     +'<div class="upg-path"><h4 style="color:'+hd.color+'">'+hd.icon+' '+hd.pathB.name+'</h4>'
     +[0,1,2].map(function(i){return'<div style="font-size:9px;color:'+((h.upB||0)>i?hd.color:'#94a3b8')+'">'+(((h.upB||0)>i)?'&#10003;':'&#9675;')+' '+hd.pathB.levels[i]+'</div>';}).join('')
@@ -2560,7 +2623,7 @@ function selT(type){
     document.getElementById('info').style.display='none';document.getElementById('sellbtn').style.display='none';
     document.querySelectorAll('.tbtn').forEach(function(b){b.classList.remove('sel');});
     var hbtn=document.getElementById('bhero');if(hbtn)hbtn.classList.add('sel');
-    setMsg('Tap a slot to deploy '+hd.icon+' '+hd.name+'!');
+    setMsg('Drag to a slot and release to deploy '+hd.icon+' '+hd.name+'!');
     document.getElementById('cancelbtn').style.display='inline-block';
     return;
   }
@@ -2571,7 +2634,7 @@ function selT(type){
   document.querySelectorAll('.tbtn').forEach(function(b){b.classList.remove('sel');});
   var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',tac:'btac',wizard:'bwizard',necro:'bnecro',farm:'bfarm'};
   if(ids[type])document.getElementById(ids[type]).classList.add('sel');
-  setMsg(type==='farm'?'Tap a slot to place BANK!':'Tap a slot to place '+TD[type].name+'!');
+  setMsg(type==='farm'?'Drag to a zone and release to place BANK!':'Drag to a slot and release to place '+TD[type].name+'!');
   document.getElementById('cancelbtn').style.display='inline-block';
 }
 
