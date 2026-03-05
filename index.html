@@ -263,6 +263,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
     <button class="tbtn" id="btac" onclick="selT('tac')"><span class="ticon">&#9873;</span><br>TAC<span class="tc"><br>&#9670;<span id="cost-tac"></span></span></button>
     <button class="tbtn" id="bwizard" onclick="selT('wizard')"><span class="ticon">&#9889;</span><br>WIZARD<span class="tc"><br>&#9670;<span id="cost-wizard"></span></span></button>
     <button class="tbtn" id="bnecro" onclick="selT('necro')"><span class="ticon">&#9760;</span><br>NECRO<span class="tc"><br>&#9670;<span id="cost-necro"></span></span></button>
+    <button class="tbtn" id="brambo" onclick="selT('rambo')"><span class="ticon">&#128299;</span><br>RAMBO<span class="tc"><br>&#9670;<span id="cost-rambo"></span></span></button>
     <button class="tbtn" id="bfarm" onclick="selT('farm')"><span class="ticon">&#9651;</span><br>BANK<span class="tc"><br>&#9670;<span id="cost-farm"></span></span><span class="farm-tag">+CR/WAVE</span></button>
     <button class="tbtn" id="bhero" onclick="selT('hero')" style="display:none;border-color:#00e5ff;background:linear-gradient(160deg,#001428,#000d1a);"><span id="heroshopicon" class="ticon">&#9874;</span><br><span id="heroshopname" style="font-family:Orbitron,sans-serif;font-size:8px;letter-spacing:.5px;">HERO</span><span class="tc"><br><span id="heroshopcost">-</span></span></button>
   </div>
@@ -402,6 +403,9 @@ var TD={
   necro:{cost:400,range:110,dmg:0,rate:0.6,col:'#7c3aed',name:'NECRO',desc:'Dark magic: Path A reanimate weak bloons backward; Path B curse (extra dmg, tier 4 jumps)',
     pathA:{name:'Reanimate',levels:['Reanimate on kill','Stronger minions','+2 minion dmg','Minions last longer','Horde: 2 minions per kill'],costs:[110,160,250,3200,10000]},
     pathB:{name:'Curse',levels:['Curse: +50% dmg taken','Curse +bleed','Curse stronger','Curse jumps on death (max 2)','Plague: jump + spread'],costs:[100,150,240,3000,9800]}},
+  rambo:{cost:280,range:95,dmg:0.6,rate:0.65,col:'#94a3b8',name:'RAMBO',desc:'Sprays small darts; poor aim at first. Path A shreds bosses, Path B shreds regrows.',
+    pathA:{name:'Boss Slayer',levels:['Boss dmg +80%','Boss dmg x2','Titan Bane +150%','Boss melt x3','Leviathan Shredder x4'],costs:[90,130,200,2600,8500]},
+    pathB:{name:'Regrow Bane',levels:['Regrow dmg +60%','Regrow dmg x2','Regrow shred +100%','Regrow wipe x2.5','Overgrowth Purge x3.5'],costs:[85,120,190,2500,8200]}},
 };
 
 var FARM_DEF={cost:500,name:'BANK',baseIncome:22,
@@ -411,12 +415,12 @@ var FARM_DEF={cost:500,name:'BANK',baseIncome:22,
 // Base HP tuned so waves 1–8 feel neck-and-neck when spending cash as you get it
 var BT=[
   {col:'#ef4444',hp:2,    spd:1.2,  rew:1,   sz:14,name:'Imp',        leak:1},
-  {col:'#3b82f6',hp:4,    spd:1.1,  rew:2,   sz:15,name:'Wisp',       leak:2},
+  {col:'#3b82f6',hp:4,    spd:1.1,  rew:2,   sz:15,name:'Wisp',       leak:2,regrow:true},
   {col:'#22c55e',hp:7,    spd:1.05, rew:3,   sz:16,name:'Gargoyle',   leak:3},
-  {col:'#f59e0b',hp:12,   spd:1.0,  rew:5,   sz:17,name:'Specter',    leak:5},
+  {col:'#f59e0b',hp:12,   spd:1.0,  rew:5,   sz:17,name:'Specter',    leak:5,regrow:true},
   {col:'#a855f7',hp:20,   spd:.95,  rew:8,   sz:17,name:'Wraith',     leak:8},
-  {col:'#ec4899',hp:38,   spd:.90,  rew:12,  sz:19,name:'Banshee',    leak:12},
-  {col:'#06b6d4',hp:65,   spd:.85,  rew:18,  sz:21,name:'Phantom',    leak:12},
+  {col:'#ec4899',hp:38,   spd:.90,  rew:12,  sz:19,name:'Banshee',    leak:12,regrow:true},
+  {col:'#06b6d4',hp:65,   spd:.85,  rew:18,  sz:21,name:'Phantom',    leak:12,regrow:true},
   {col:'#f43f5e',hp:115,  spd:.80,  rew:25,  sz:22,name:'Hellknight', leak:16},
   {col:'#334155',hp:240,  spd:.75,  rew:40,  sz:24,name:'Dreadlord',  leak:22},
   {col:'#fbbf24',hp:500,  spd:.70,  rew:80,  sz:29,moab:true,name:'Archfiend',leak:30},
@@ -476,6 +480,7 @@ var running=false,over=false,won=false,cleared=false;
 var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[],traps=[],allies=[];
 function countCursed(){var n=0;for(var i=0;i<bloons.length;i++)if(bloons[i].curse)n++;return n;}
 var selType=null,selObj=null,prevSnap=null;
+var cursorX=null,cursorY=null,cursorOnCanvas=false;
 var spawnQ=[],spawnT=0,bid=0,pid=0,trapId=0,lt=0;
 
 function farmIncome(f){
@@ -570,7 +575,7 @@ function spawnBloon(ti){
     x:PP[0].x,y:PP[0].y,col:d.col,sz:d.sz,frz:0,rew:d.rew,leak:d.leak||1,
     moab:!!d.moab,boss:!!isBoss,bossName:isBoss?d.name:'',
     tierIdx:isBoss?9:(typeof ti==='number'?ti:0),
-    dead:false,burn:0,permafrost:false};
+    dead:false,burn:0,permafrost:false,regrow:!!d.regrow};
   bloons.push(b);
   if(isBoss){activeBoss=b;updateBossBar();}
 }
@@ -591,6 +596,10 @@ function hitBloon(b,p){
   if(!b||b.dead||b.hp<=0)return;
   var dmg=p.dmg;
   if(b.curse)dmg*=1.5;
+  if(p.srcT&&p.srcT.type==='rambo'){
+    if(b.boss&&(p.bossDmgMult||1)>1)dmg*=p.bossDmgMult;
+    if(b.regrow&&(p.regrowDmgMult||1)>1)dmg*=p.regrowDmgMult;
+  }
   if(p.curseOnHit&&countCursed()<2){b.curse=true;b.curseTower=p.srcT;}
   if(p.frz){
     if(p.permafrost)b.permafrost=true;
@@ -659,8 +668,16 @@ function getTowerStats(t){
   if(t.type==='necro'){
     if(pa>=1)dmg=1;if(pa>=2)dmg=2;if(pa>=3)dmg=4;if(pa>=4)dmg=8;if(pa>=5)dmg=12;
   }
+  var spread=0,bossDmgMult=1,regrowDmgMult=1,dartCount=6;
+  if(t.type==='rambo'){
+    dartCount=6+pa+pb;
+    spread=Math.max(0.08,0.52-(pa+pb)*0.06);
+    if(pa>=1)bossDmgMult=1.8;if(pa>=2)bossDmgMult=2;if(pa>=3)bossDmgMult=2.5;if(pa>=4)bossDmgMult=3;if(pa>=5)bossDmgMult=4;
+    if(pb>=1)regrowDmgMult=1.6;if(pb>=2)regrowDmgMult=2;if(pb>=3)regrowDmgMult=2.5;if(pb>=4)regrowDmgMult=2.5;if(pb>=5)regrowDmgMult=3.5;
+  }
   return{dmg:dmg,rate:rate,range:infiniteRange?9999:range,splash:splash,freezeAmt:freezeAmt,
-    permafrost:permafrost,burnMode:burnMode,chainCount:chainCount,clusterCount:clusterCount,nukeMode:nukeMode};
+    permafrost:permafrost,burnMode:burnMode,chainCount:chainCount,clusterCount:clusterCount,nukeMode:nukeMode,
+    spread:spread,bossDmgMult:bossDmgMult,regrowDmgMult:regrowDmgMult,dartCount:dartCount};
 }
 
 function update(dt){
@@ -741,12 +758,37 @@ function update(dt){
       }
       if(best){
         t.shots=(t.shots||0)+1;
-        projs.push({id:pid++,x:t.x,y:t.y,tx:best.x,ty:best.y,tid:best.id,
-          spd:t.type==='laser'?9:(t.type==='wizard'?7:6.5),type:t.type,dmg:st.dmg,col:TD[t.type].col,
-          spl:st.splash,frz:t.type==='freeze',famt:st.freezeAmt,permafrost:st.permafrost,
-          burn:st.burnMode,chainCount:st.chainCount,clusterCount:st.clusterCount,
-          nuke:st.nukeMode,done:false,srcT:t,curseOnHit:t.type==='necro'&&(t.upB||0)>=1});
-        t.lf=now;t.lastAngle=Math.atan2(best.y-t.y,best.x-t.x);
+        if(t.type==='rambo'){
+          var aimX=best.x,aimY=best.y;
+          if(t.lockAim&&t.lockedAimX!=null&&t.lockedAimY!=null){
+            aimX=t.lockedAimX;aimY=t.lockedAimY;
+            var toLock=Math.hypot(aimX-t.x,aimY-t.y);
+            if(toLock>st.range){var r=st.range/toLock;aimX=t.x+(aimX-t.x)*r;aimY=t.y+(aimY-t.y)*r;}
+          } else if(cursorOnCanvas&&cursorX!=null&&cursorY!=null){
+            var dx=cursorX-t.x,dy=cursorY-t.y;
+            var toCursor=Math.hypot(dx,dy);
+            if(toCursor>1){var r=Math.min(toCursor,st.range);aimX=t.x+dx/toCursor*r;aimY=t.y+dy/toCursor*r;}
+          }
+          t.lastAngle=Math.atan2(aimY-t.y,aimX-t.x);
+          var baseAngle=t.lastAngle,dist=Math.hypot(aimX-t.x,aimY-t.y);
+          var dc=st.dartCount||6,spread=st.spread||0.4;
+          for(var g=0;g<dc;g++){
+            var dartAngle=baseAngle+(Math.random()-0.5)*2*spread;
+            var gtx=t.x+Math.cos(dartAngle)*dist,gty=t.y+Math.sin(dartAngle)*dist;
+            projs.push({id:pid++,x:t.x,y:t.y,tx:gtx,ty:gty,tid:best.id,
+              spd:8,type:'rambo',dmg:st.dmg,col:TD[t.type].col,spl:0,frz:false,famt:0,permafrost:false,
+              burn:false,chainCount:0,clusterCount:0,nuke:false,done:false,srcT:t,
+              bossDmgMult:st.bossDmgMult,regrowDmgMult:st.regrowDmgMult});
+          }
+        } else {
+          t.lastAngle=Math.atan2(best.y-t.y,best.x-t.x);
+          projs.push({id:pid++,x:t.x,y:t.y,tx:best.x,ty:best.y,tid:best.id,
+            spd:t.type==='laser'?9:(t.type==='wizard'?7:6.5),type:t.type,dmg:st.dmg,col:TD[t.type].col,
+            spl:st.splash,frz:t.type==='freeze',famt:st.freezeAmt,permafrost:st.permafrost,
+            burn:st.burnMode,chainCount:st.chainCount,clusterCount:st.clusterCount,
+            nuke:st.nukeMode,done:false,srcT:t,curseOnHit:t.type==='necro'&&(t.upB||0)>=1});
+        }
+        t.lf=now;
       }
     }
   }
@@ -784,7 +826,7 @@ function update(dt){
     var p=projs[pi];
     var tgt=null;
     for(var bi2=0;bi2<bloons.length;bi2++){if(bloons[bi2].id===p.tid){tgt=bloons[bi2];break;}}
-    if(tgt){p.tx=tgt.x;p.ty=tgt.y;}
+    if(tgt&&p.type!=='rambo'){p.tx=tgt.x;p.ty=tgt.y;}
     var dx=p.tx-p.x,dy=p.ty-p.y,dd=Math.hypot(dx,dy);
     if(dd<p.spd*sm*2){
       p.done=true;splParts(p.tx,p.ty,p.col,p.spl>0||p.nuke?10:3);
@@ -792,6 +834,13 @@ function update(dt){
       if(splR>0){
         for(var bi3=0;bi3<bloons.length;bi3++)
           if(Math.hypot(bloons[bi3].x-p.tx,bloons[bi3].y-p.ty)<=splR)hitBloon(bloons[bi3],p);
+      } else if(p.type==='rambo'){
+        var near=null,nearD=30;
+        for(var biG=0;biG<bloons.length;biG++){
+          var bg=bloons[biG];var dg=Math.hypot(bg.x-p.tx,bg.y-p.ty);
+          if(dg<nearD){nearD=dg;near=bg;}
+        }
+        if(near)hitBloon(near,p);
       } else if(tgt){
         hitBloon(tgt,p);
         if(p.chainCount>0){
@@ -1387,6 +1436,30 @@ function drawTower(c,t,sel){
     // Aim line
     c.save();c.translate(x,y-8);c.rotate(bangle);
     c.globalAlpha=0.6;c.strokeStyle=necAc;c.lineWidth=2;c.beginPath();c.moveTo(0,0);c.lineTo(12,0);c.stroke();c.globalAlpha=1;
+    c.restore();
+  } else if(type==='rambo'){
+    c.save();c.translate(x,y-8);
+    var gatCol='#94a3b8',gatDark='#475569';
+    var baseR=6+tier*1.2;
+    var bg=c.createRadialGradient(0,0,0,0,0,baseR);
+    bg.addColorStop(0,'rgba(255,255,255,0.35)');bg.addColorStop(0.5,gatCol);bg.addColorStop(1,gatDark);
+    c.fillStyle=bg;c.beginPath();c.arc(0,0,baseR,0,Math.PI*2);c.fill();
+    c.strokeStyle='#64748b';c.lineWidth=1;c.stroke();
+    var nBarrels=Math.min(3+tier,6);
+    c.save();c.rotate(bangle);
+    for(var gb=0;gb<nBarrels;gb++){
+      var ga=(gb/nBarrels)*Math.PI*2+spin*0.4;
+      c.save();c.rotate(ga);c.translate(8,0);
+      c.fillStyle=gatDark;c.fillRect(-1.5,-1,10,2);
+      c.fillStyle=gatCol;c.beginPath();c.arc(8,0,2,0,Math.PI*2);c.fill();
+      c.restore();
+    }
+    c.restore();
+    if(mf>0){
+      c.save();c.rotate(bangle);c.globalAlpha=mf;
+      c.fillStyle='rgba(255,255,255,0.8)';for(var gf=0;gf<4;gf++){var gfa=(gf/4)*Math.PI*2;c.beginPath();c.arc(8+Math.cos(gfa)*4,Math.sin(gfa)*4,2,0,Math.PI*2);c.fill();}
+      c.globalAlpha=1;c.restore();
+    }
     c.restore();
   }
 
@@ -2292,6 +2365,9 @@ function draw(){
     } else if(pr.type==='necro'){
       cx.fillStyle='#7c3aed';cx.globalAlpha=0.9;cx.beginPath();cx.arc(0,0,5,0,Math.PI*2);cx.fill();
       cx.strokeStyle='#a78bfa';cx.lineWidth=1;cx.stroke();cx.globalAlpha=1;
+    } else if(pr.type==='rambo'){
+      cx.fillStyle=pr.col||'#94a3b8';cx.beginPath();cx.arc(0,0,3,0,Math.PI*2);cx.fill();
+      cx.strokeStyle='#64748b';cx.lineWidth=0.8;cx.stroke();
     } else {
       // Default orb
       var og=cx.createRadialGradient(-1,-1,0,0,0,5);
@@ -2345,11 +2421,11 @@ function updPrev(x,y){
   if(selType==='farm'){prevSnap=nearZone(x,y)||null;}
   else if(selType){prevSnap=nearSlot(x,y)||null;}
 }
-cv.addEventListener('mousemove',function(e){if(selType){var p=getXY(e.clientX,e.clientY);updPrev(p.x,p.y);}});
-cv.addEventListener('mouseleave',function(){prevSnap=null;});
+cv.addEventListener('mousemove',function(e){var p=getXY(e.clientX,e.clientY);cursorX=p.x;cursorY=p.y;cursorOnCanvas=true;if(selType)updPrev(p.x,p.y);});
+cv.addEventListener('mouseleave',function(){prevSnap=null;cursorOnCanvas=false;});
 cv.addEventListener('mousedown',function(e){if(selType){var p=getXY(e.clientX,e.clientY);updPrev(p.x,p.y);}});
 cv.addEventListener('mouseup',function(e){if(selType){var p=getXY(e.clientX,e.clientY);updPrev(p.x,p.y);tryPlaceAt(p.x,p.y);}});
-cv.addEventListener('touchmove',function(e){e.preventDefault();if(selType){var t=e.touches[0],p=getXY(t.clientX,t.clientY);updPrev(p.x,p.y);}},{passive:false});
+cv.addEventListener('touchmove',function(e){e.preventDefault();var touch=e.touches[0];if(touch){var p=getXY(touch.clientX,touch.clientY);cursorX=p.x;cursorY=p.y;cursorOnCanvas=true;if(selType)updPrev(p.x,p.y);}},{passive:false});
 cv.addEventListener('touchend',function(e){e.preventDefault();var t=e.changedTouches[0],p=getXY(t.clientX,t.clientY);updPrev(p.x,p.y);tryPlaceAt(p.x,p.y);tap(p.x,p.y);},{passive:false});
 cv.addEventListener('click',function(e){var p=getXY(e.clientX,e.clientY);tap(p.x,p.y);});
 
@@ -2450,9 +2526,24 @@ function showInfo(obj){
       +'<div class="upg-path"><h4>&#127825; '+d.pathB.name+'</h4>'
       +[0,1,2,3,4].map(function(i){return'<div style="font-size:9px;color:'+(obj.upB>i?(i>=3?'#fb923c':'#fdba74'):'#94a3b8')+'">'+(obj.upB>i?'&#10003;':'&#9675;')+' '+d.pathB.levels[i]+'</div>';}).join('')
       +(obj.upB<5?'<button class="upg-btn pathb" '+(!canB||$m<d.pathB.costs[obj.upB]?'disabled':'')+' onclick="upgPath(\'B\')">'+lblB+'</button>':'<div class="upg-btn pathb ascended-cap" style="display:flex;align-items:center;justify-content:center;color:#f5c842;border-color:#f5c842;background:linear-gradient(160deg,#2a2008,#0d0a00);cursor:default;pointer-events:none;">ASCENDED</div>')
-      +'</div></div>':'<div style="color:#64748b;margin-top:2px;font-size:10px">Game over — view only</div>');
+      +'</div>'
+      +(obj.type==='rambo'&&!readOnly?'<div style="margin-top:6px;padding:4px 0;border-top:1px solid #334155;"><button type="button" class="upg-btn patha" style="font-size:9px;padding:4px 8px;" onclick="toggleLockRamboAim(selObj)">'+(obj.lockAim?'&#128274; Unlock aim':'&#128275; Lock aim at cursor')+'</button></div>':'')
+      +'</div>':'<div style="color:#64748b;margin-top:2px;font-size:10px">Game over — view only</div>');
   }
   document.getElementById('sellbtn').style.display=readOnly?'none':'inline-flex';
+}
+
+function toggleLockRamboAim(t){
+  if(!t||t.type!=='rambo')return;
+  if(t.lockAim){
+    t.lockAim=false;t.lockedAimX=null;t.lockedAimY=null;
+    setMsg('RAMBO aim unlocked — follows cursor again.');
+  } else {
+    if(cursorX==null||cursorY==null){setMsg('Move the cursor on the map first, then Lock.');return;}
+    t.lockAim=true;t.lockedAimX=cursorX;t.lockedAimY=cursorY;
+    setMsg('RAMBO aim locked at current cursor position!');
+  }
+  if(selObj===t)showInfo(t);
 }
 
 function showHeroInfo(h){
@@ -2637,7 +2728,7 @@ function selT(type){
   selType=type;selObj=null;prevSnap=null;
   document.getElementById('info').style.display='none';document.getElementById('sellbtn').style.display='none';
   document.querySelectorAll('.tbtn').forEach(function(b){b.classList.remove('sel');});
-  var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',tac:'btac',wizard:'bwizard',necro:'bnecro',farm:'bfarm'};
+  var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',tac:'btac',wizard:'bwizard',necro:'bnecro',rambo:'brambo',farm:'bfarm'};
   if(ids[type])document.getElementById(ids[type]).classList.add('sel');
   setMsg(type==='farm'?'Drag to a zone and release to place BANK!':'Drag to a slot and release to place '+TD[type].name+'!');
   document.getElementById('cancelbtn').style.display='inline-block';
@@ -2654,7 +2745,7 @@ function cancelSel(){
 function updShop(){
   var shop=document.getElementById('shop');
   if(shop)shop.classList.toggle('gameover',over||won);
-  var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',tac:'btac',wizard:'bwizard',necro:'bnecro',farm:'bfarm'};
+  var ids={dart:'bd',cannon:'bc',freeze:'bf',sniper:'bsn',laser:'bl',tac:'btac',wizard:'bwizard',necro:'bnecro',rambo:'brambo',farm:'bfarm'};
   for(var k in ids){
     var b=document.getElementById(ids[k]);if(!b)continue;
     var cost=k==='farm'?FARM_DEF.cost:TD[k].cost;
@@ -3036,7 +3127,7 @@ window.addEventListener('resize',doResize);
 doResize();updShop();lt=performance.now();
 // Populate shop costs from data (single source of truth)
 (function(){
-  var map={dart:'dart',cannon:'cannon',freeze:'freeze',sniper:'sniper',laser:'laser',tac:'tac',wizard:'wizard',necro:'necro'};
+  var map={dart:'dart',cannon:'cannon',freeze:'freeze',sniper:'sniper',laser:'laser',tac:'tac',wizard:'wizard',necro:'necro',rambo:'rambo'};
   for(var k in map){var el=document.getElementById('cost-'+k);if(el)el.textContent=TD[map[k]].cost;}
   var fe=document.getElementById('cost-farm');if(fe)fe.textContent=FARM_DEF.cost;
 })();
