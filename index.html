@@ -403,7 +403,7 @@ var TD={
   necro:{cost:400,range:110,dmg:0,rate:0.6,col:'#7c3aed',name:'NECRO',desc:'Dark magic: Path A reanimate weak bloons backward; Path B curse (extra dmg, tier 4 jumps)',
     pathA:{name:'Reanimate',levels:['Reanimate on kill','Stronger minions','+2 minion dmg','Minions last longer','Horde: 2 minions per kill'],costs:[110,160,250,3200,10000]},
     pathB:{name:'Curse',levels:['Curse: +50% dmg taken','Curse +bleed','Curse stronger','Curse jumps on death (max 2)','Plague: jump + spread'],costs:[100,150,240,3000,9800]}},
-  rambo:{cost:280,range:95,dmg:0.6,rate:0.65,col:'#94a3b8',name:'RAMBO',desc:'Sprays small darts; poor aim at first. Path A shreds bosses, Path B shreds regrows.',
+  rambo:{cost:280,range:9999,dmg:0.35,rate:1.2,col:'#94a3b8',name:'RAMBO',desc:'Sprays small darts; poor aim at first. Path A shreds bosses, Path B shreds regrows. Full map range.',
     pathA:{name:'Boss Slayer',levels:['Boss dmg +80%','Boss dmg x2','Titan Bane +150%','Boss melt x3','Leviathan Shredder x4'],costs:[90,130,200,2600,8500]},
     pathB:{name:'Regrow Bane',levels:['Regrow dmg +60%','Regrow dmg x2','Regrow shred +100%','Regrow wipe x2.5','Overgrowth Purge x3.5'],costs:[85,120,190,2500,8200]}},
 };
@@ -481,6 +481,7 @@ var towers=[],farms=[],bloons=[],projs=[],parts=[],floaties=[],traps=[],allies=[
 function countCursed(){var n=0;for(var i=0;i<bloons.length;i++)if(bloons[i].curse)n++;return n;}
 var selType=null,selObj=null,prevSnap=null;
 var cursorX=null,cursorY=null,cursorOnCanvas=false;
+var awaitingRamboLock=null;
 var spawnQ=[],spawnT=0,bid=0,pid=0,trapId=0,lt=0;
 
 function farmIncome(f){
@@ -670,6 +671,7 @@ function getTowerStats(t){
   }
   var spread=0,bossDmgMult=1,regrowDmgMult=1,dartCount=6;
   if(t.type==='rambo'){
+    range=9999;
     dartCount=6+pa+pb;
     spread=Math.max(0.08,0.52-(pa+pb)*0.06);
     if(pa>=1)bossDmgMult=1.8;if(pa>=2)bossDmgMult=2;if(pa>=3)bossDmgMult=2.5;if(pa>=4)bossDmgMult=3;if(pa>=5)bossDmgMult=4;
@@ -756,39 +758,37 @@ function update(dt){
         var b2=bloons[bi];
         if((Math.hypot(b2.x-t.x,b2.y-t.y)<=st.range||st.range>=9999)&&b2.dist>bd){bd=b2.dist;best=b2;}
       }
-      if(best){
-        t.shots=(t.shots||0)+1;
+      if(best||(t.type==='rambo'&&(t.lockAim&&t.lockedAimX!=null||cursorOnCanvas&&cursorX!=null))){
         if(t.type==='rambo'){
-          var aimX=best.x,aimY=best.y;
+          var aimX=best?best.x:t.lockedAimX,aimY=best?best.y:t.lockedAimY;
           if(t.lockAim&&t.lockedAimX!=null&&t.lockedAimY!=null){
             aimX=t.lockedAimX;aimY=t.lockedAimY;
-            var toLock=Math.hypot(aimX-t.x,aimY-t.y);
-            if(toLock>st.range){var r=st.range/toLock;aimX=t.x+(aimX-t.x)*r;aimY=t.y+(aimY-t.y)*r;}
-          } else if(cursorOnCanvas&&cursorX!=null&&cursorY!=null){
-            var dx=cursorX-t.x,dy=cursorY-t.y;
-            var toCursor=Math.hypot(dx,dy);
-            if(toCursor>1){var r=Math.min(toCursor,st.range);aimX=t.x+dx/toCursor*r;aimY=t.y+dy/toCursor*r;}
+          } else if(!best&&cursorOnCanvas&&cursorX!=null&&cursorY!=null){
+            aimX=cursorX;aimY=cursorY;
           }
+          t.shots=(t.shots||0)+1;
           t.lastAngle=Math.atan2(aimY-t.y,aimX-t.x);
-          var baseAngle=t.lastAngle,dist=Math.hypot(aimX-t.x,aimY-t.y);
-          var dc=st.dartCount||6,spread=st.spread||0.4;
+          var baseAngle=t.lastAngle,dist=Math.hypot(aimX-t.x,aimY-t.y)||st.range;
+          var dc=st.dartCount||6,spr=st.spread||0.4;
           for(var g=0;g<dc;g++){
-            var dartAngle=baseAngle+(Math.random()-0.5)*2*spread;
+            var dartAngle=baseAngle+(Math.random()-0.5)*2*spr;
             var gtx=t.x+Math.cos(dartAngle)*dist,gty=t.y+Math.sin(dartAngle)*dist;
-            projs.push({id:pid++,x:t.x,y:t.y,tx:gtx,ty:gty,tid:best.id,
+            projs.push({id:pid++,x:t.x,y:t.y,tx:gtx,ty:gty,tid:best?best.id:0,
               spd:8,type:'rambo',dmg:st.dmg,col:TD[t.type].col,spl:0,frz:false,famt:0,permafrost:false,
               burn:false,chainCount:0,clusterCount:0,nuke:false,done:false,srcT:t,
               bossDmgMult:st.bossDmgMult,regrowDmgMult:st.regrowDmgMult});
           }
-        } else {
+          t.lf=now;
+        } else if(best){
+          t.shots=(t.shots||0)+1;
           t.lastAngle=Math.atan2(best.y-t.y,best.x-t.x);
           projs.push({id:pid++,x:t.x,y:t.y,tx:best.x,ty:best.y,tid:best.id,
             spd:t.type==='laser'?9:(t.type==='wizard'?7:6.5),type:t.type,dmg:st.dmg,col:TD[t.type].col,
             spl:st.splash,frz:t.type==='freeze',famt:st.freezeAmt,permafrost:st.permafrost,
             burn:st.burnMode,chainCount:st.chainCount,clusterCount:st.clusterCount,
             nuke:st.nukeMode,done:false,srcT:t,curseOnHit:t.type==='necro'&&(t.upB||0)>=1});
+          t.lf=now;
         }
-        t.lf=now;
       }
     }
   }
@@ -1455,11 +1455,9 @@ function drawTower(c,t,sel){
       c.restore();
     }
     c.restore();
-    if(mf>0){
-      c.save();c.rotate(bangle);c.globalAlpha=mf;
-      c.fillStyle='rgba(255,255,255,0.8)';for(var gf=0;gf<4;gf++){var gfa=(gf/4)*Math.PI*2;c.beginPath();c.arc(8+Math.cos(gfa)*4,Math.sin(gfa)*4,2,0,Math.PI*2);c.fill();}
-      c.globalAlpha=1;c.restore();
-    }
+    c.save();c.rotate(bangle);c.globalAlpha=0.5;
+    c.fillStyle='rgba(255,255,255,0.6)';for(var gf=0;gf<4;gf++){var gfa=(gf/4)*Math.PI*2;c.beginPath();c.arc(8+Math.cos(gfa)*4,Math.sin(gfa)*4,2,0,Math.PI*2);c.fill();}
+    c.globalAlpha=1;c.restore();
     c.restore();
   }
 
@@ -2459,6 +2457,14 @@ function tryPlaceAt(x,y){
 }
 
 function tap(x,y){
+  if(awaitingRamboLock){
+    var t=awaitingRamboLock;
+    t.lockAim=true;t.lockedAimX=x;t.lockedAimY=y;
+    awaitingRamboLock=null;
+    setMsg('RAMBO aim locked at that spot!');
+    if(selObj===t)showInfo(t);
+    return;
+  }
   if(paused){
     var rw=130,rh=44,rx=(cv.width-rw)/2,ry=(cv.height-rh)/2;
     if(x>=rx&&x<=rx+rw&&y>=ry&&y<=ry+rh){togglePause();}
@@ -2527,7 +2533,7 @@ function showInfo(obj){
       +[0,1,2,3,4].map(function(i){return'<div style="font-size:9px;color:'+(obj.upB>i?(i>=3?'#fb923c':'#fdba74'):'#94a3b8')+'">'+(obj.upB>i?'&#10003;':'&#9675;')+' '+d.pathB.levels[i]+'</div>';}).join('')
       +(obj.upB<5?'<button class="upg-btn pathb" '+(!canB||$m<d.pathB.costs[obj.upB]?'disabled':'')+' onclick="upgPath(\'B\')">'+lblB+'</button>':'<div class="upg-btn pathb ascended-cap" style="display:flex;align-items:center;justify-content:center;color:#f5c842;border-color:#f5c842;background:linear-gradient(160deg,#2a2008,#0d0a00);cursor:default;pointer-events:none;">ASCENDED</div>')
       +'</div>'
-      +(obj.type==='rambo'&&!readOnly?'<div style="margin-top:6px;padding:4px 0;border-top:1px solid #334155;"><button type="button" class="upg-btn patha" style="font-size:9px;padding:4px 8px;" onclick="toggleLockRamboAim(selObj)">'+(obj.lockAim?'&#128274; Unlock aim':'&#128275; Lock aim at cursor')+'</button></div>':'')
+      +(obj.type==='rambo'&&!readOnly?'<div style="margin-top:6px;padding:4px 0;border-top:1px solid #334155;"><button type="button" class="upg-btn patha" style="font-size:9px;padding:4px 8px;" onclick="toggleLockRamboAim(selObj)">'+(awaitingRamboLock===obj?'Click map to set lock…':obj.lockAim?'&#128274; Unlock aim':'&#128275; Set lock (click map)')+'</button></div>':'')
       +'</div>':'<div style="color:#64748b;margin-top:2px;font-size:10px">Game over — view only</div>');
   }
   document.getElementById('sellbtn').style.display=readOnly?'none':'inline-flex';
@@ -2537,11 +2543,14 @@ function toggleLockRamboAim(t){
   if(!t||t.type!=='rambo')return;
   if(t.lockAim){
     t.lockAim=false;t.lockedAimX=null;t.lockedAimY=null;
-    setMsg('RAMBO aim unlocked — follows cursor again.');
+    awaitingRamboLock=null;
+    setMsg('RAMBO aim unlocked.');
+  } else if(awaitingRamboLock===t){
+    awaitingRamboLock=null;
+    setMsg('Cancelled.');
   } else {
-    if(cursorX==null||cursorY==null){setMsg('Move the cursor on the map first, then Lock.');return;}
-    t.lockAim=true;t.lockedAimX=cursorX;t.lockedAimY=cursorY;
-    setMsg('RAMBO aim locked at current cursor position!');
+    awaitingRamboLock=t;
+    setMsg('Click on the map where you want RAMBO to aim.');
   }
   if(selObj===t)showInfo(t);
 }
@@ -2940,7 +2949,7 @@ function goMenu(){
 function resetGame(){
   $m=STARTING_CASH;$l=STARTING_LIVES;$w=0;$s=1;gameTotalDmg=0;paused=false;autoPlay=false;running=false;over=false;won=false;cleared=false;
   towers=[];farms=[];bloons=[];projs=[];parts=[];floaties=[];traps=[];allies=[];
-  selType=null;selObj=null;prevSnap=null;spawnQ=[];spawnT=0;
+  selType=null;selObj=null;prevSnap=null;awaitingRamboLock=null;spawnQ=[];spawnT=0;
   activeBoss=null;heroUnit=null;heroAbilityReady=false;heroCooldownLeft=0;fortifyActive=false;
   document.getElementById('mdisp').textContent=$m;
   document.getElementById('ldisp').textContent=$l;
@@ -3021,7 +3030,7 @@ function loadGame(slot){
     heroCooldownLeft=s.heroCooldownLeft;
     fortifyActive=s.fortifyActive;
     bloons=[];projs=[];parts=[];floaties=[];traps=[];allies=[];spawnQ=[];spawnT=0;activeBoss=null;
-    selType=null;selObj=null;prevSnap=null;
+    selType=null;selObj=null;prevSnap=null;awaitingRamboLock=null;
 
     // Hide overlays
     document.getElementById('landover').style.display='none';
